@@ -4,29 +4,44 @@ import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
 // Path to the self-check PDF (bundled with the function deployment)
-const SELF_CHECK_PDF_PATH = path.join(process.cwd(), "Where is your practice right now - self-check.pdf");
+// Try multiple possible paths for Netlify bundler compatibility
+const SELF_CHECK_PDF_PATHS = [
+  path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
+  path.join(process.cwd(), "netlify/functions", "Where is your practice right now - self-check.pdf"),
+  "Where is your practice right now - self-check.pdf",
+];
 
 // Read the PDF once at cold start (if it exists)
 let selfCheckPdfBuffer = null;
-try {
-  if (fs.existsSync(SELF_CHECK_PDF_PATH)) {
-    selfCheckPdfBuffer = fs.readFileSync(SELF_CHECK_PDF_PATH);
+for (const pdfPath of SELF_CHECK_PDF_PATHS) {
+  try {
+    if (fs.existsSync(pdfPath)) {
+      selfCheckPdfBuffer = fs.readFileSync(pdfPath);
+      break;
+    }
+  } catch {
+    // Try next path
   }
-} catch (err) {
-  console.warn("Could not read self-check PDF:", err.message);
 }
 
 // Path to the logo image (bundled with the function deployment)
-const LOGO_PATH = path.join(process.cwd(), "Logo.png");
+const LOGO_PATHS = [
+  path.join(process.cwd(), "Logo.png"),
+  path.join(process.cwd(), "netlify/functions", "Logo.png"),
+  "Logo.png",
+];
 
 // Read the logo once at cold start (if it exists)
 let logoBuffer = null;
-try {
-  if (fs.existsSync(LOGO_PATH)) {
-    logoBuffer = fs.readFileSync(LOGO_PATH);
+for (const logoPath of LOGO_PATHS) {
+  try {
+    if (fs.existsSync(logoPath)) {
+      logoBuffer = fs.readFileSync(logoPath);
+      break;
+    }
+  } catch {
+    // Try next path
   }
-} catch (err) {
-  console.warn("Could not read logo:", err.message);
 }
 
 // Logo HTML for email headers (uses cid:logo embedded attachment)
@@ -486,12 +501,11 @@ async function storeSubmission(formType, fields) {
 
     if (formType === "selfCheck") {
       await client.query(
-        `INSERT INTO self_check_submissions (first_name, email, marketing_consent, created_at)
-         VALUES ($1, $2, $3, NOW())
+        `INSERT INTO self_check_submissions (first_name, email, marketing_consent)
+         VALUES ($1, $2, $3)
          ON CONFLICT (email) DO UPDATE SET
            first_name = EXCLUDED.first_name,
-           marketing_consent = EXCLUDED.marketing_consent,
-           created_at = NOW()`,
+           marketing_consent = EXCLUDED.marketing_consent`,
         [
           fields.first_name || "",
           fields.email || "",
@@ -500,8 +514,8 @@ async function storeSubmission(formType, fields) {
       );
     } else if (formType === "call") {
       await client.query(
-        `INSERT INTO call_requests (first_name, email, phone, help_with, created_at)
-         VALUES ($1, $2, $3, $4, NOW())`,
+        `INSERT INTO call_requests (first_name, email, phone, help_with)
+         VALUES ($1, $2, $3, $4)`,
         [
           fields.first_name || "",
           fields.email || "",
@@ -514,8 +528,8 @@ async function storeSubmission(formType, fields) {
         `INSERT INTO founding_members (
            first_name, last_name, email, address_1, address_2,
            town, postcode, country, letter_topics,
-           reserve_confirm, marketing_consent, created_at
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+           reserve_confirm, marketing_consent
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
         [
           fields.first_name || "",
           fields.last_name || "",
@@ -675,15 +689,13 @@ export const handler = async (event, context) => {
         : [],
     };
 
-    // Attach self-check PDF for self-check form
+    // Attach self-check PDF for self-check form (in addition to logo)
     if (formType === "selfCheck" && selfCheckPdfBuffer) {
-      mailOptions.attachments = [
-        {
-          filename: "Where is your practice right now - self-check.pdf",
-          content: selfCheckPdfBuffer,
-          contentType: "application/pdf",
-        },
-      ];
+      mailOptions.attachments.push({
+        filename: "Where is your practice right now - self-check.pdf",
+        content: selfCheckPdfBuffer,
+        contentType: "application/pdf",
+      });
     }
 
     await transporter.sendMail(mailOptions);
