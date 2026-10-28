@@ -21,6 +21,24 @@ try {
   console.warn("Could not read self-check PDF:", err.message);
 }
 
+// Path to the logo image (bundled with the function deployment)
+const LOGO_PATH = path.join(__dirname, "Logo.png");
+
+// Read the logo once at cold start (if it exists)
+let logoBuffer = null;
+try {
+  if (fs.existsSync(LOGO_PATH)) {
+    logoBuffer = fs.readFileSync(LOGO_PATH);
+  }
+} catch (err) {
+  console.warn("Could not read logo:", err.message);
+}
+
+// Logo HTML for email headers (uses cid:logo embedded attachment)
+const logoHtml = logoBuffer
+  ? `<img src="cid:logo" alt="The Lightworker Coach" style="display:block;width:48px;height:48px;border-radius:50%;" />`
+  : `<span style="display:inline-block;width:48px;height:48px;background-color:#a67c2b;border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;"><span style="color:#ffffff;font-size:24px;line-height:1;">☀</span></span>`;
+
 // ============================================================
 // HELPERS
 // ============================================================
@@ -68,9 +86,7 @@ function selfCheckHtml({ firstName, downloadUrl }) {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:12px;">
-                    <span style="display:inline-block;width:48px;height:48px;background-color:${BRAND.gold};border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;">
-                      <span style="color:${BRAND.white};font-size:24px;line-height:1;">☀</span>
-                    </span>
+                    ${logoHtml}
                   </td>
                 </tr>
                 <tr>
@@ -170,9 +186,7 @@ function callHtml({ firstName }) {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:12px;">
-                    <span style="display:inline-block;width:48px;height:48px;background-color:${BRAND.gold};border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;">
-                      <span style="color:${BRAND.white};font-size:24px;line-height:1;">☀</span>
-                    </span>
+                    ${logoHtml}
                   </td>
                 </tr>
                 <tr>
@@ -253,9 +267,7 @@ function foundingHtml({ firstName }) {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:12px;">
-                    <span style="display:inline-block;width:48px;height:48px;background-color:${BRAND.gold};border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;">
-                      <span style="color:${BRAND.white};font-size:24px;line-height:1;">☀</span>
-                    </span>
+                    ${logoHtml}
                   </td>
                 </tr>
                 <tr>
@@ -337,9 +349,7 @@ function peterCallNotificationHtml({ firstName, email, phone, helpWith }) {
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
                   <td align="center" style="padding-bottom:8px;">
-                    <span style="display:inline-block;width:40px;height:40px;background-color:${BRAND.gold};border-radius:50%;line-height:40px;text-align:center;vertical-align:middle;">
-                      <span style="color:${BRAND.white};font-size:20px;line-height:1;">☀</span>
-                    </span>
+                    ${logoHtml}
                   </td>
                 </tr>
                 <tr>
@@ -658,6 +668,16 @@ export const handler = async (event, context) => {
       text: plainBody,
       html: htmlBody,
       replyTo: SMTP_FROM_EMAIL,
+      attachments: logoBuffer
+        ? [
+            {
+              filename: "Logo.png",
+              content: logoBuffer,
+              contentType: "image/png",
+              cid: "logo",
+            },
+          ]
+        : [],
     };
 
     // Attach self-check PDF for self-check form
@@ -682,6 +702,16 @@ export const handler = async (event, context) => {
         text: `New free call request:\n\nFirst name: ${firstName}\nEmail: ${email}\nPhone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}\n`,
         html: peterCallNotificationHtml({ firstName, email, phone: fields.phone || "", helpWith: fields.help_with || "" }),
         replyTo: email,
+        attachments: logoBuffer
+          ? [
+              {
+                filename: "Logo.png",
+                content: logoBuffer,
+                contentType: "image/png",
+                cid: "logo",
+              },
+            ]
+          : [],
       });
     }
 
