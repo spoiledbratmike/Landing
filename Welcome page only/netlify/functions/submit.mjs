@@ -44,13 +44,6 @@ const BRAND = {
   white: "#ffffff",
 };
 
-function wrapEmail(html, plainText) {
-  return {
-    html,
-    text: plainText,
-  };
-}
-
 // ============================================================
 // EMAIL CONTENT (HTML + plain text)
 // ============================================================
@@ -118,9 +111,11 @@ function selfCheckHtml({ firstName, downloadUrl }) {
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="left">
-                          <a href="${escapeHtml(downloadUrl)}" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.gold};transition:all 0.2s;">
-                            Download Your Self-Check
-                          </a>
+                          ${
+                            downloadUrl
+                              ? `<a href="${escapeHtml(downloadUrl)}" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.gold};transition:all 0.2s;">Download Your Self-Check</a>`
+                              : `<span style="display:inline-block;background-color:${BRAND.goldLight};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.goldLight};">Download Your Self-Check</span>`
+                          }
                         </td>
                       </tr>
                     </table>
@@ -139,7 +134,7 @@ function selfCheckHtml({ firstName, downloadUrl }) {
                     With love and light,<br />
                     <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
                     The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${SMTP_FROM_EMAIL}</a><br />
+                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
                     · © 2026 Lightworker Coach Limited
                   </td>
                 </tr>
@@ -222,7 +217,7 @@ function callHtml({ firstName }) {
                     With love and light,<br />
                     <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
                     The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${SMTP_FROM_EMAIL}</a><br />
+                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
                     · © 2026 Lightworker Coach Limited
                   </td>
                 </tr>
@@ -306,7 +301,7 @@ function foundingHtml({ firstName }) {
                     With love and light,<br />
                     <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
                     The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${SMTP_FROM_EMAIL}</a><br />
+                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
                     · © 2026 Lightworker Coach Limited
                   </td>
                 </tr>
@@ -413,7 +408,7 @@ function peterCallNotificationHtml({ firstName, email, phone, helpWith }) {
                 <tr>
                   <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:12px;letter-spacing:0.08em;line-height:1.6;">
                     The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${SMTP_FROM_EMAIL}</a><br />
+                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
                     · © 2026 Lightworker Coach Limited
                   </td>
                 </tr>

@@ -15,7 +15,7 @@ import { SunIcon, ArrowIcon, CheckIcon, QuoteIcon, MailIcon } from "../component
  * Environment variables (set in Netlify dashboard → Site settings →
  * Environment variables):
  *   SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASSWORD,
- *   SMTP_FROM_EMAIL, SMTP_FROM_NAME, NOTIFY_TO, DATABASE_URL
+ *   SMTP_FROM_EMAIL, SMTP_FROM_NAME, NOTIFY_TO, DATABASE_URL, SITE_URL
  *
  * The self-check PDF (public/Where is your practice right now - self-check.pdf)
  * is attached to the self-check confirmation email automatically.
@@ -152,6 +152,7 @@ function PageForm({
 
   return (
     <form onSubmit={onSubmit} className="space-y-5">
+      {/* honeypot */}
       <input
         type="text"
         name="website"
@@ -164,7 +165,7 @@ function PageForm({
       {failed && (
         <p role="alert" className="rounded-xl border border-night-200 bg-night-50/60 p-4 text-sm text-night-900">
           Something went wrong sending your details. Please try again, or email{" "}
-          <a href="mailto:peter@lightworkercoach.co.uk" className="underline decoration-gold-500 underline-offset-2">
+          <a href={`mailto:${import.meta.env.VITE_CONTACT_EMAIL || "peter@lightworkercoach.co.uk"}`} className="underline decoration-gold-500 underline-offset-2">
             peter@lightworkercoach.co.uk
           </a>{" "}
           directly.
@@ -508,7 +509,7 @@ export default function Welcome() {
         </p>
         <p className="mt-3 inline-flex items-center gap-2">
           <MailIcon className="h-4 w-4 text-gold-600" />
-          <a href="mailto:peter@lightworkercoach.co.uk" className="underline-offset-2 hover:underline">
+          <a href={`mailto:${import.meta.env.VITE_CONTACT_EMAIL || "peter@lightworkercoach.co.uk"}`} className="underline-offset-2 hover:underline">
             peter@lightworkercoach.co.uk
           </a>
         </p>

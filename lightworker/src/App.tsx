@@ -1,13 +1,6 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import Navbar from "./components/Navbar";
-import Footer from "./components/Footer";
-import Home from "./pages/Home";
-import About from "./pages/About";
-import Services from "./pages/Services";
-import Blog from "./pages/Blog";
-import BlogPost from "./pages/BlogPost";
-import Contact from "./pages/Contact";
+import Welcome from "./pages/Welcome";
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -22,19 +15,10 @@ export default function App() {
     <BrowserRouter>
       <ScrollToTop />
       <div className="relative min-h-screen bg-white">
-        <Navbar />
-        <main>
-          <Routes>
-            <Route path="/" element={<Home />} />
-            <Route path="/about" element={<About />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/blog" element={<Blog />} />
-            <Route path="/blog/:slug" element={<BlogPost />} />
-            <Route path="/contact" element={<Contact />} />
-            <Route path="*" element={<Home />} />
-          </Routes>
-        </main>
-        <Footer />
+        <Routes>
+          <Route path="/" element={<Welcome />} />
+          <Route path="*" element={<Welcome />} />
+        </Routes>
       </div>
     </BrowserRouter>
   );

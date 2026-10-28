@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "builds": [
+    { "src": "package.json", "use": "@vercel/static-build" },
+    { "src": "api/*.mjs", "use": "@vercel/node" }
+  ],
+  "routes": [
+    { "src": "/api/submit", "methods": ["POST"], "dest": "/api/submit.mjs" },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ],
+  "env": {
+    "SMTP_HOST": "@smtp_host",
+    "SMTP_PORT": "@smtp_port",
+    "SMTP_SECURE": "@smtp_secure",
+    "SMTP_USER": "@smtp_user",
+    "SMTP_PASSWORD": "@smtp_password",
+    "SMTP_FROM_EMAIL": "@smtp_from_email",
+    "SMTP_FROM_NAME": "@smtp_from_name",
+    "NOTIFY_TO": "@notify_to",
+    "DATABASE_URL": "@database_url",
+    "SITE_URL": "@site_url"
+  }
+}

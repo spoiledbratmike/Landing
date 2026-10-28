@@ -21,11 +21,11 @@ import { SunIcon, ArrowIcon, CheckIcon, QuoteIcon, MailIcon } from "../component
 const PRIVACY_URL = "/privacy";
 const PETER_PHOTO: string | null = peterImg; // Peter's photo (public/images/peter.jpg)
 
-// Form submissions go to PHP backend on SiteGround
+// Form submissions go to Vercel serverless function
 const FORMS = {
-  selfCheck: { action: "/welcome/submit.php", group: "Amanda Zoom – Self-check" },
-  call: { action: "/welcome/submit.php", group: "Amanda Zoom – Call requests" },
-  founding: { action: "/welcome/submit.php", group: "Founding members – £29" },
+  selfCheck: { action: "/api/submit?form_type=selfCheck", group: "Self-check" },
+  call: { action: "/api/submit?form_type=call", group: "Free call" },
+  founding: { action: "/api/submit?form_type=founding", group: "Founding members – £29" },
 };
 
 const body = "text-[17px] sm:text-lg leading-relaxed text-night-900/90";
