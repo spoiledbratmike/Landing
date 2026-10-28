@@ -700,27 +700,37 @@ export const handler = async (event, context) => {
 
     await transporter.sendMail(mailOptions);
 
-    // Peter notification for call requests
-    if (formType === "call") {
-      await transporter.sendMail({
-        from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
-        to: NOTIFY_TO,
-        subject: `New free call request from ${firstName}`,
-        text: `New free call request:\n\nFirst name: ${firstName}\nEmail: ${email}\nPhone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}\n`,
-        html: peterCallNotificationHtml({ firstName, email, phone: fields.phone || "", helpWith: fields.help_with || "" }),
-        replyTo: email,
-        attachments: logoBuffer
-          ? [
-              {
-                filename: "Logo.png",
-                content: logoBuffer,
-                contentType: "image/png",
-                cid: "logo",
-              },
-            ]
-          : [],
-      });
-    }
+    // Peter notification for ALL form submissions
+    const peterSubjects = {
+      selfCheck: `New self-check submission from ${firstName}`,
+      call: `New free call request from ${firstName}`,
+      founding: `New founding member reservation from ${firstName}`,
+    };
+
+    const peterMessages = {
+      selfCheck: `New self-check submission:\n\nFirst name: ${firstName}\nEmail: ${email}\nMarketing consent: ${fields.marketing_consent === "on" || fields.marketing_consent === true ? "Yes" : "No"}\n`,
+      call: `New free call request:\n\nFirst name: ${firstName}\nEmail: ${email}\nPhone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}\n`,
+      founding: `New founding member reservation:\n\nFirst name: ${firstName}\nLast name: ${fields.last_name || ""}\nEmail: ${email}\nAddress: ${fields.address_1 || ""}, ${fields.address_2 || ""}\nTown: ${fields.town || ""}\nPostcode: ${fields.postcode || ""}\nCountry: ${fields.country || ""}\nLetter topics: ${fields.letter_topics || ""}\nReserve confirm: ${fields.reserve_confirm === "on" || fields.reserve_confirm === true ? "Yes" : "No"}\nMarketing consent: ${fields.marketing_consent === "on" || fields.marketing_consent === true ? "Yes" : "No"}\n`,
+    };
+
+    await transporter.sendMail({
+      from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
+      to: NOTIFY_TO,
+      subject: peterSubjects[formType],
+      text: peterMessages[formType],
+      html: `<h2>New ${formType} submission</h2><p>First name: ${escapeHtml(firstName)}</p><p>Email: <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>`,
+      replyTo: email,
+      attachments: logoBuffer
+        ? [
+            {
+              filename: "Logo.png",
+              content: logoBuffer,
+              contentType: "image/png",
+              cid: "logo",
+            },
+          ]
+        : [],
+    });
 
     return {
       statusCode: 200,
