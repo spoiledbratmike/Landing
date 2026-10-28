@@ -3,44 +3,51 @@ import path from "path";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
-// Path to the self-check PDF (bundled with the function deployment)
-// Try multiple possible paths for Netlify bundler compatibility
-const SELF_CHECK_PDF_PATHS = [
-  path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
-  path.join(process.cwd(), "netlify/functions", "Where is your practice right now - self-check.pdf"),
-  "Where is your practice right now - self-check.pdf",
-];
+// ============================================================
+// FILE PATHS - Try multiple locations for Netlify bundler compatibility
+// ============================================================
 
-// Read the PDF once at cold start (if it exists)
-let selfCheckPdfBuffer = null;
-for (const pdfPath of SELF_CHECK_PDF_PATHS) {
-  try {
-    if (fs.existsSync(pdfPath)) {
-      selfCheckPdfBuffer = fs.readFileSync(pdfPath);
-      break;
+function findFile(...possiblePaths) {
+  for (const p of possiblePaths) {
+    try {
+      if (fs.existsSync(p)) {
+        return p;
+      }
+    } catch {
+      // try next
     }
-  } catch {
-    // Try next path
+  }
+  return null;
+}
+
+const SELF_CHECK_PDF_PATH = findFile(
+  path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
+  path.join(__dirname, "Where is your practice right now - self-check.pdf"),
+  "Where is your practice right now - self-check.pdf",
+);
+
+const LOGO_PATH = findFile(
+  path.join(process.cwd(), "Logo.png"),
+  path.join(__dirname, "Logo.png"),
+  "Logo.png",
+);
+
+// Read files once at cold start
+let selfCheckPdfBuffer = null;
+if (SELF_CHECK_PDF_PATH) {
+  try {
+    selfCheckPdfBuffer = fs.readFileSync(SELF_CHECK_PDF_PATH);
+  } catch (err) {
+    console.warn("Could not read self-check PDF:", err.message);
   }
 }
 
-// Path to the logo image (bundled with the function deployment)
-const LOGO_PATHS = [
-  path.join(process.cwd(), "Logo.png"),
-  path.join(process.cwd(), "netlify/functions", "Logo.png"),
-  "Logo.png",
-];
-
-// Read the logo once at cold start (if it exists)
 let logoBuffer = null;
-for (const logoPath of LOGO_PATHS) {
+if (LOGO_PATH) {
   try {
-    if (fs.existsSync(logoPath)) {
-      logoBuffer = fs.readFileSync(logoPath);
-      break;
-    }
-  } catch {
-    // Try next path
+    logoBuffer = fs.readFileSync(LOGO_PATH);
+  } catch (err) {
+    console.warn("Could not read logo:", err.message);
   }
 }
 
@@ -124,8 +131,7 @@ function selfCheckHtml({ firstName, downloadUrl }) {
                 </tr>
                 <tr>
                   <td align="left" style="padding-top:20px;color:${BRAND.nightSoft};font-family:'Jost',sans-serif;font-size:16px;line-height:1.7;">
-                    Thank you for patiently listening to me on Friday's call, and for asking for the self-check.<br /><br />
-                    Your self-check is attached to this email. You can also download it using the button below.<br /><br />
+                    Thank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email. You can also download it using the button below.<br /><br />
                     Take ten quiet minutes with it. There are no right or wrong answers. Just an honest look at where your practice is today, and the next gentle step.<br /><br />
                     If you'd like to talk it through, simply reply to this email.
                   </td>
@@ -559,8 +565,6 @@ async function storeSubmission(formType, fields) {
 // HANDLER
 // ============================================================
 
-// Read form_type from URL query string (e.g. /.netlify/functions/submit?form_type=call)
-// or from the request body as a fallback.
 function getFormType(event, fields) {
   if (event.queryStringParameters && event.queryStringParameters.form_type) {
     return event.queryStringParameters.form_type;
@@ -573,7 +577,6 @@ function getFormType(event, fields) {
   return fields.form_type || fields.form || "selfCheck";
 }
 
-// CORS headers for all responses
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "Content-Type",
@@ -582,16 +585,10 @@ const corsHeaders = {
 };
 
 export const handler = async (event, context) => {
-  // Handle CORS preflight requests
   if (event.httpMethod === "OPTIONS") {
-    return {
-      statusCode: 200,
-      headers: corsHeaders,
-      body: "",
-    };
+    return { statusCode: 200, headers: corsHeaders, body: "" };
   }
 
-  // Only allow POST
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
@@ -601,38 +598,26 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Parse multipart/form-data from the frontend
-    const contentType = event.headers["content-type"] || event.headers["Content-Type"];
-    const isMultipart = contentType && contentType.includes("multipart/form-data");
+    const contentType = event.headers["content-type"] || event.headers["Content-Type"] || "";
+    const isMultipart = contentType.includes("multipart/form-data");
 
     let fields = {};
     if (isMultipart && event.body) {
       const boundary = contentType.split("boundary=")[1];
       if (!boundary) {
-        return {
-          statusCode: 400,
-          headers: corsHeaders,
-          body: JSON.stringify({ ok: false, error: "Missing boundary" }),
-        };
+        return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing boundary" }) };
       }
       const body = Buffer.from(event.body, event.isBase64Encoded ? "base64" : "utf8");
       const parts = body.toString("utf8").split(`--${boundary}`);
-
       for (const part of parts) {
         if (part.trim() === "--" || part.trim() === "") continue;
         const [headers, ...valueParts] = part.split("\r\n\r\n");
         const value = valueParts.join("\r\n\r\n").replace(/\r\n--$/, "").trim();
         const nameMatch = headers.match(/name="([^"]+)"/);
-        if (nameMatch) {
-          fields[nameMatch[1]] = value;
-        }
+        if (nameMatch) fields[nameMatch[1]] = value;
       }
     } else if (event.body) {
-      try {
-        fields = JSON.parse(event.body);
-      } catch {
-        fields = {};
-      }
+      try { fields = JSON.parse(event.body); } catch { fields = {}; }
     }
 
     const formType = getFormType(event, fields);
@@ -641,76 +626,47 @@ export const handler = async (event, context) => {
 
     const downloadUrl = SITE_URL ? `${SITE_URL}/images/Where%20is%20your%20practice%20right%20now%20-%20self-check.pdf` : "";
 
-    // 1) Store submission in Neon/Postgres (non-fatal — emails still send if DB fails)
-    try {
-      await storeSubmission(formType, fields);
-    } catch (dbErr) {
-      console.error("Database insert failed, continuing with email:", dbErr.message);
-    }
+    // 1) Store submission in Neon/Postgres (non-fatal)
+    try { await storeSubmission(formType, fields); }
+    catch (dbErr) { console.error("Database error:", dbErr.message); }
 
     // 2) Send emails
     const transporter = buildTransporter();
 
-    // Confirmation email to visitor (HTML + plain text, with PDF attachment for self-check)
-    let htmlBody;
-    let plainBody;
+    let htmlBody, plainBody;
     if (formType === "selfCheck") {
       htmlBody = selfCheckHtml({ firstName, downloadUrl });
-      plainBody = `Dear ${firstName},\n\nThank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email. You can also download it here: ${downloadUrl || "Not available"}\n\nTake ten quiet minutes with it. There are no right or wrong answers. Just an honest look at where your practice is today, and the next gentle step.\n\nIf you'd like to talk it through, simply reply to this email.\n\nWith love and light, Peter`;
+      plainBody = `Dear ${firstName},\n\nThank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email.\n\nTake ten quiet minutes with it.\n\nWith love and light, Peter`;
     } else if (formType === "call") {
       htmlBody = callHtml({ firstName });
-      plainBody = `Dear ${firstName},\n\nThank you for asking for a call. I'll email you within two working days with some times to choose from. I'm looking forward to hearing about your practice.\n\nWith love and light, Peter`;
+      plainBody = `Dear ${firstName},\n\nThank you for asking for a call. I'll email you within two working days.\n\nWith love and light, Peter`;
     } else if (formType === "founding") {
       htmlBody = foundingHtml({ firstName });
-      plainBody = `Dear ${firstName},\n\nThank you. Your place as a founding member of my monthly letter is reserved, at £29 a month, locked in for as long as you stay.\n\nThere's nothing to pay now. In December I'll email you a simple link to set up your monthly payment, and your first letter will arrive in January 2027.\n\nIf anything changes for you before then, just reply to this email.\n\nWith love and light, Peter`;
+      plainBody = `Dear ${firstName},\n\nYour founding member place is reserved.\n\nWith love and light, Peter`;
     }
 
     const mailOptions = {
       from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
       to: email,
-      subject:
-        formType === "selfCheck"
-          ? "Your self-check is here"
-          : formType === "call"
-            ? "Your free call with Peter"
-            : "Your founding place is reserved",
+      subject: formType === "selfCheck" ? "Your self-check is here" : formType === "call" ? "Your free call with Peter" : "Your founding place is reserved",
       text: plainBody,
       html: htmlBody,
       replyTo: SMTP_FROM_EMAIL,
-      attachments: logoBuffer
-        ? [
-            {
-              filename: "Logo.png",
-              content: logoBuffer,
-              contentType: "image/png",
-              cid: "logo",
-            },
-          ]
-        : [],
+      attachments: logoBuffer ? [{ filename: "Logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [],
     };
 
-    // Attach self-check PDF for self-check form (in addition to logo)
     if (formType === "selfCheck" && selfCheckPdfBuffer) {
-      mailOptions.attachments.push({
-        filename: "Where is your practice right now - self-check.pdf",
-        content: selfCheckPdfBuffer,
-        contentType: "application/pdf",
-      });
+      mailOptions.attachments.push({ filename: "Where is your practice right now - self-check.pdf", content: selfCheckPdfBuffer, contentType: "application/pdf" });
     }
 
     await transporter.sendMail(mailOptions);
 
     // Peter notification for ALL form submissions
-    const peterSubjects = {
-      selfCheck: `New self-check submission from ${firstName}`,
-      call: `New free call request from ${firstName}`,
-      founding: `New founding member reservation from ${firstName}`,
-    };
-
+    const peterSubjects = { selfCheck: `New self-check from ${firstName}`, call: `New call request from ${firstName}`, founding: `New founding member from ${firstName}` };
     const peterMessages = {
-      selfCheck: `New self-check submission:\n\nFirst name: ${firstName}\nEmail: ${email}\nMarketing consent: ${fields.marketing_consent === "on" || fields.marketing_consent === true ? "Yes" : "No"}\n`,
-      call: `New free call request:\n\nFirst name: ${firstName}\nEmail: ${email}\nPhone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}\n`,
-      founding: `New founding member reservation:\n\nFirst name: ${firstName}\nLast name: ${fields.last_name || ""}\nEmail: ${email}\nAddress: ${fields.address_1 || ""}, ${fields.address_2 || ""}\nTown: ${fields.town || ""}\nPostcode: ${fields.postcode || ""}\nCountry: ${fields.country || ""}\nLetter topics: ${fields.letter_topics || ""}\nReserve confirm: ${fields.reserve_confirm === "on" || fields.reserve_confirm === true ? "Yes" : "No"}\nMarketing consent: ${fields.marketing_consent === "on" || fields.marketing_consent === true ? "Yes" : "No"}\n`,
+      selfCheck: `Self-check: ${firstName} <${email}>\nMarketing: ${fields.marketing_consent ? "Yes" : "No"}`,
+      call: `Call request: ${firstName} <${email}>\nPhone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}`,
+      founding: `Founding member: ${firstName} ${fields.last_name || ""} <${email}>\nAddress: ${fields.address_1 || ""}, ${fields.town || ""}, ${fields.postcode || ""}\nCountry: ${fields.country || ""}`,
     };
 
     await transporter.sendMail({
@@ -718,18 +674,9 @@ export const handler = async (event, context) => {
       to: NOTIFY_TO,
       subject: peterSubjects[formType],
       text: peterMessages[formType],
-      html: `<h2>New ${formType} submission</h2><p>First name: ${escapeHtml(firstName)}</p><p>Email: <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>`,
+      html: `<h2 style="color:#6b2a6b;">New ${formType} submission</h2><p><strong>Name:</strong> ${escapeHtml(firstName)}</p><p><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>`,
       replyTo: email,
-      attachments: logoBuffer
-        ? [
-            {
-              filename: "Logo.png",
-              content: logoBuffer,
-              contentType: "image/png",
-              cid: "logo",
-            },
-          ]
-        : [],
+      attachments: logoBuffer ? [{ filename: "Logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [],
     });
 
     return {
@@ -739,10 +686,6 @@ export const handler = async (event, context) => {
     };
   } catch (err) {
     console.error("Form submission error:", err);
-    return {
-      statusCode: 500,
-      headers: corsHeaders,
-      body: JSON.stringify({ ok: false, error: err.message || "Failed to process submission" }),
-    };
+    return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ ok: false, error: err.message || "Failed to process submission" }) };
   }
 };
