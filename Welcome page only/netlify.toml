@@ -2,8 +2,10 @@
   command = "npm run build"
   publish = "dist"
   functions = "netlify/functions"
+  base = "Welcome page only"
 
 [build.environment]
+  NODE_VERSION = "18"
   SECRETS_SCAN_OMIT_KEYS = "SMTP_HOST,SMTP_PORT,SMTP_SECURE,SMTP_USER,SMTP_PASSWORD,SMTP_FROM_EMAIL,SMTP_FROM_NAME,NOTIFY_TO,DATABASE_URL,SITE_URL"
 
 [[redirects]]
