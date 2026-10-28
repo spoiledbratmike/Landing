@@ -9,6 +9,11 @@
   SECRETS_SCAN_OMIT_KEYS = "SMTP_HOST,SMTP_PORT,SMTP_SECURE,SMTP_USER,SMTP_PASSWORD,SMTP_FROM_EMAIL,SMTP_FROM_NAME,NOTIFY_TO,DATABASE_URL,SITE_URL"
 
 [[redirects]]
+  from = "/.netlify/functions/*"
+  to = "/.netlify/functions/:splat"
+  status = 200
+
+[[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
