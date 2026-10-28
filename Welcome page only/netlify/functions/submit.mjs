@@ -1,15 +1,10 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
-// Get __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 // Path to the self-check PDF (bundled with the function deployment)
-const SELF_CHECK_PDF_PATH = path.join(__dirname, "Where is your practice right now - self-check.pdf");
+const SELF_CHECK_PDF_PATH = path.join(process.cwd(), "Where is your practice right now - self-check.pdf");
 
 // Read the PDF once at cold start (if it exists)
 let selfCheckPdfBuffer = null;
@@ -22,7 +17,7 @@ try {
 }
 
 // Path to the logo image (bundled with the function deployment)
-const LOGO_PATH = path.join(__dirname, "Logo.png");
+const LOGO_PATH = path.join(process.cwd(), "Logo.png");
 
 // Read the logo once at cold start (if it exists)
 let logoBuffer = null;
