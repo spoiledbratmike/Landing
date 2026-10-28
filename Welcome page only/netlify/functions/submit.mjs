@@ -666,20 +666,115 @@ export const handler = async (event, context) => {
 
     await transporter.sendMail(mailOptions);
 
-    // Peter notification for ALL form submissions
+    // Peter notification for ALL form submissions (styled HTML)
     const peterSubjects = { selfCheck: `New self-check from ${firstName}`, call: `New call request from ${firstName}`, founding: `New founding member from ${firstName}` };
-    const peterMessages = {
-      selfCheck: `Self-check: ${firstName} <${email}>\nMarketing: ${fields.marketing_consent ? "Yes" : "No"}`,
-      call: `Call request: ${firstName} <${email}>\nPhone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}`,
-      founding: `Founding member: ${firstName} ${fields.last_name || ""} <${email}>\nAddress: ${fields.address_1 || ""}, ${fields.town || ""}, ${fields.postcode || ""}\nCountry: ${fields.country || ""}`,
-    };
+
+    const peterDetailsHtml = formType === "selfCheck"
+      ? `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Self-check</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Marketing Consent</td><td style="padding:8px 0;color:${BRAND.night};">${fields.marketing_consent ? "Yes" : "No"}</td></tr>`
+      : formType === "call"
+        ? `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Free Call</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Phone</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.phone || "Not provided")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Help With</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.help_with || "Not provided")}</td></tr>`
+        : `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Founding Member</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Last Name</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.last_name || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Address</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.address_1 || "")} ${escapeHtml(fields.address_2 || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Town / Postcode / Country</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.town || "")}, ${escapeHtml(fields.postcode || "")}, ${escapeHtml(fields.country || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Letter Topics</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.letter_topics || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Reserve Confirm</td><td style="padding:8px 0;color:${BRAND.night};">${fields.reserve_confirm ? "Yes" : "No"}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Marketing Consent</td><td style="padding:8px 0;color:${BRAND.night};">${fields.marketing_consent ? "Yes" : "No"}</td></tr>`;
 
     await transporter.sendMail({
       from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
       to: NOTIFY_TO,
       subject: peterSubjects[formType],
-      text: peterMessages[formType],
-      html: `<h2 style="color:#6b2a6b;">New ${formType} submission</h2><p><strong>Name:</strong> ${escapeHtml(firstName)}</p><p><strong>Email:</strong> <a href="mailto:${escapeHtml(email)}">${escapeHtml(email)}</a></p>`,
+      text: `New ${formType} submission:\n\nName: ${firstName}\nEmail: ${email}\n${formType === "selfCheck" ? `Marketing: ${fields.marketing_consent ? "Yes" : "No"}` : formType === "call" ? `Phone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}` : `Founding member: ${firstName} ${fields.last_name || ""}\nAddress: ${fields.address_1 || ""}, ${fields.town || ""}, ${fields.postcode || ""}\nCountry: ${fields.country || ""}\nLetter topics: ${fields.letter_topics || ""}\nReserve: ${fields.reserve_confirm ? "Yes" : "No"}\nMarketing: ${fields.marketing_consent ? "Yes" : "No"}`}`,
+      html: `
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>New ${formType} Submission</title>
+</head>
+<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Jost',sans-serif;color:${BRAND.night};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="background-color:${BRAND.plum};padding:24px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="padding-bottom:8px;">
+                    ${logoHtml}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:700;letter-spacing:0.04em;">
+                    New ${formType.charAt(0).toUpperCase() + formType.slice(1)} Submission
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Details -->
+          <tr>
+            <td style="padding:32px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;">
+                    New Submission Details
+                  </td>
+                </tr>
+                <tr>
+                  <td align="left" style="padding-top:24px;color:${BRAND.nightSoft};font-size:15px;line-height:1.7;">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Name</td>
+                        <td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(firstName)}</td>
+                      </tr>
+                      <tr>
+                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Email</td>
+                        <td style="padding:8px 0;color:${BRAND.night};"><a href="mailto:${escapeHtml(email)}" style="color:${BRAND.gold};text-decoration:none;">${escapeHtml(email)}</a></td>
+                      </tr>
+                      ${peterDetailsHtml}
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Reply button -->
+          <tr>
+            <td align="left" style="padding:32px;">
+              <table role="presentation" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="left">
+                    <a href="mailto:${escapeHtml(email)}?subject=Re%3A%20New%20${formType.charAt(0).toUpperCase() + formType.slice(1)}%20submission" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:50px;padding:12px 28px;text-align:center;border:2px solid ${BRAND.gold};">
+                      Reply to ${escapeHtml(firstName)}
+                    </a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:12px;letter-spacing:0.08em;line-height:1.6;">
+                    The Lightworker Coach · Helping those who help others<br />
+                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
+                    · © 2026 Lightworker Coach Limited
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+      `,
       replyTo: email,
       attachments: logoBuffer ? [{ filename: "Logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [],
     });
