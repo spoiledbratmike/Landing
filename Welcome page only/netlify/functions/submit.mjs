@@ -1,7 +1,12 @@
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
+
+// Get __dirname equivalent for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // ============================================================
 // FILE PATHS - Try multiple locations for Netlify bundler compatibility
@@ -21,14 +26,14 @@ function findFile(...possiblePaths) {
 }
 
 const SELF_CHECK_PDF_PATH = findFile(
-  path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
   path.join(__dirname, "Where is your practice right now - self-check.pdf"),
+  path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
   "Where is your practice right now - self-check.pdf",
 );
 
 const LOGO_PATH = findFile(
-  path.join(process.cwd(), "Logo.png"),
   path.join(__dirname, "Logo.png"),
+  path.join(process.cwd(), "Logo.png"),
   "Logo.png",
 );
 
