@@ -109,6 +109,18 @@ function GoldButton({ children }: { children: ReactNode }) {
     <button
       type="submit"
       className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold-500 px-7 py-4 text-base font-semibold text-white transition-all hover:bg-gold-600 hover:shadow-[0_0_40px_-8px_rgba(217,177,85,0.7)] sm:w-auto"
+      style={{
+        backgroundColor: "#a67c2b",
+        color: "white",
+        borderRadius: "50px",
+        padding: "14px 32px",
+        fontWeight: "600",
+        border: "2px solid #a67c2b",
+        width: "100%",
+        textAlign: "center",
+        fontSize: "1rem",
+        cursor: "pointer",
+      }}
     >
       {children}
       <ArrowIcon className="h-4 w-4 transition-transform group-hover:translate-x-1" />
