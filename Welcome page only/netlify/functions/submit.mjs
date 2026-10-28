@@ -1,12 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
-
-// Get __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
 
 // ============================================================
 // FILE PATHS - Try multiple locations for Netlify bundler compatibility
@@ -26,14 +21,14 @@ function findFile(...possiblePaths) {
 }
 
 const SELF_CHECK_PDF_PATH = findFile(
-  path.join(__dirname, "Where is your practice right now - self-check.pdf"),
   path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
+  path.join(process.cwd(), "netlify/functions", "Where is your practice right now - self-check.pdf"),
   "Where is your practice right now - self-check.pdf",
 );
 
 const LOGO_PATH = findFile(
-  path.join(__dirname, "Logo.png"),
   path.join(process.cwd(), "Logo.png"),
+  path.join(process.cwd(), "netlify/functions", "Logo.png"),
   "Logo.png",
 );
 
@@ -666,9 +661,8 @@ export const handler = async (event, context) => {
 
     await transporter.sendMail(mailOptions);
 
-    // Peter notification for ALL form submissions (styled HTML)
+    // Peter notification for ALL form submissions
     const peterSubjects = { selfCheck: `New self-check from ${firstName}`, call: `New call request from ${firstName}`, founding: `New founding member from ${firstName}` };
-
     const peterDetailsHtml = formType === "selfCheck"
       ? `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Self-check</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Marketing Consent</td><td style="padding:8px 0;color:${BRAND.night};">${fields.marketing_consent ? "Yes" : "No"}</td></tr>`
       : formType === "call"
