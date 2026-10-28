@@ -1,0 +1,23 @@
+# Enable CORS for the welcome page
+<IfModule mod_headers.c>
+    Header always set Access-Control-Allow-Origin "https://lightworkercoach.co.uk"
+    Header always set Access-Control-Allow-Methods "POST, OPTIONS"
+    Header always set Access-Control-Allow-Headers "Content-Type"
+</IfModule>
+
+# Prevent directory listing
+Options -Indexes
+
+# Protect sensitive files
+<Files ".env">
+    Require all denied
+</Files>
+
+<Files "database-schema.sql">
+    Require all denied
+</Files>
+
+# Allow form submissions
+<Files "submit.php">
+    Require all granted
+</Files>

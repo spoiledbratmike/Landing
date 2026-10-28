@@ -1,0 +1,21 @@
+import pg from 'pg';
+const { Client } = pg;
+const c = new Client({connectionString:'postgresql://neondb_owner:npg_iDL9f6QFNaOJ@ep-red-bread-za4sgjj2-pooler.c-2.eu-west-2.aws.neon.tech/Welcome?sslmode=require&channel_binding=require'});
+c.connect().then(async()=>{
+  console.log('connected');
+  await c.query("DELETE FROM self_check_submissions WHERE email IN ('jane.doe@example.com','sarah.smith@example.com')");
+  await c.query("DELETE FROM call_requests WHERE email IN ('mike.jones@example.com','lisa.brown@example.com')");
+  await c.query("DELETE FROM founding_members WHERE email IN ('emma.wilson@example.com')");
+  await c.query("INSERT INTO self_check_submissions (first_name,email,marketing_consent) VALUES ('Jane','jane.doe@example.com',true)");
+  await c.query("INSERT INTO self_check_submissions (first_name,email,marketing_consent) VALUES ('Sarah','sarah.smith@example.com',false)");
+  await c.query("INSERT INTO call_requests (first_name,email,phone,help_with) VALUES ('Mike','mike.jones@example.com','+44 7700 900123','I would like help with starting my healing practice')");
+  await c.query("INSERT INTO call_requests (first_name,email,phone,help_with) VALUES ('Lisa','lisa.brown@example.com','+44 7700 900456','Need guidance on pricing my services')");
+  await c.query("INSERT INTO founding_members (first_name,last_name,email,address_1, town, postcode, country, letter_topics, reserve_confirm, marketing_consent) VALUES ('Emma','Wilson','emma.wilson@example.com','123 High Street','London','SW1A 1AA','United Kingdom','Finding clients, pricing with confidence','true','true')");
+  const r1 = await c.query('SELECT count(*) FROM self_check_submissions');
+  const r2 = await c.query('SELECT count(*) FROM call_requests');
+  const r3 = await c.query('SELECT count(*) FROM founding_members');
+  console.log('self_check:', r1.rows[0].count);
+  console.log('call_requests:', r2.rows[0].count);
+  console.log('founding_members:', r3.rows[0].count);
+  await c.end();
+}).catch(e=>{console.log('ERR');console.log(e.message);});

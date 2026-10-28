@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Inter", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-serif: "Crimson Pro", Georgia, serif;
+  --font-hand: "Caveat", cursive;
+  --font-typewriter: "Special Elite", ui-monospace, monospace;
+
+  --color-night-50: #f9f8f6;
+  --color-night-100: #f3f1ec;
+  --color-night-200: #e7e3dc;
+  --color-night-300: #d6d0c4;
+  --color-night-700: #6b6456;
+  --color-night-800: #4a4438;
+  --color-night-900: #2d281f;
+
+  --color-gold-400: #d9b155;
+  --color-gold-500: #b99a4a;
+  --color-gold-600: #a67c2b;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+.gold-text {
+  background: linear-gradient(90deg, #a67c2b 0%, #d9b155 50%, #a67c2b 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
