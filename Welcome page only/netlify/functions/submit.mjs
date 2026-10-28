@@ -554,12 +554,29 @@ function getFormType(event, fields) {
   return fields.form_type || fields.form || "selfCheck";
 }
 
+// CORS headers for all responses
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Content-Type": "application/json",
+};
+
 export const handler = async (event, context) => {
+  // Handle CORS preflight requests
+  if (event.httpMethod === "OPTIONS") {
+    return {
+      statusCode: 200,
+      headers: corsHeaders,
+      body: "",
+    };
+  }
+
   // Only allow POST
   if (event.httpMethod !== "POST") {
     return {
       statusCode: 405,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({ ok: false, error: "Method not allowed" }),
     };
   }
@@ -575,7 +592,7 @@ export const handler = async (event, context) => {
       if (!boundary) {
         return {
           statusCode: 400,
-          headers: { "Content-Type": "application/json" },
+          headers: corsHeaders,
           body: JSON.stringify({ ok: false, error: "Missing boundary" }),
         };
       }
@@ -670,14 +687,14 @@ export const handler = async (event, context) => {
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({ ok: true, message: "Form submitted successfully" }),
     };
   } catch (err) {
     console.error("Form submission error:", err);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json" },
+      headers: corsHeaders,
       body: JSON.stringify({ ok: false, error: err.message || "Failed to process submission" }),
     };
   }
