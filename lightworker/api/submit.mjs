@@ -4,8 +4,8 @@ import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
-// Public URL for the self-check PDF (hosted on WordPress — not on Netlify)
-const SELF_CHECK_PDF_URL = "https://lightworkercoach.co.uk/wp-content/uploads/2026/10/Where-is-your-practice-right-now-self-check.pdf";
+// Public URL for the self-check PDF (hosted on Netlify images — same domain as the site)
+const SELF_CHECK_PDF_URL = "https://lightworkercoach.netlify.app/images/Where%20is%20your%20practice%20right%20now%20-%20self-check.pdf";
 
 // Fetch the PDF from the public URL at send time
 async function fetchPdfBuffer() {
