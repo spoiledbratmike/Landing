@@ -4,7 +4,7 @@ import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
 // Public URL for the self-check PDF (hosted on Netlify images — same domain as the site)
-const SELF_CHECK_PDF_URL = "https://lightworkercoach.netlify.app/images/Where%20is%20your%20practice%20right%20now%20-%20self-check.pdf";
+const SELF_CHECK_PDF_URL = "https://lightworkercoach.co.uk/where-is-your-practice-right-now-self-check-2/";
 
 // Fetch the PDF from the public URL at send time (Netlify does not bundle arbitrary files with functions)
 async function fetchPdfBuffer() {
@@ -639,7 +639,7 @@ export const handler = async (event, context) => {
     if (formType === "selfCheck") {
       const pdfBuffer = await fetchPdfBuffer();
       if (pdfBuffer) {
-        mailOptions.attachments.push({ filename: "Where is your practice right now - self-check.pdf", content: pdfBuffer, contentType: "application/pdf" });
+        mailOptions.attachments.push({ filename: "Where is your practice right now -self-check.pdf", content: pdfBuffer, contentType: "application/pdf" });
       }
     }
 
