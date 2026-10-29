@@ -1,3 +1,5 @@
-The self-check PDF was replaced with the newly supplied version of "Where is your practice right now – self-check". All copies of the file in the project were updated, including the one served from the site, so the PDF attached to the visitor's self-check confirmation email is now the new document.
+The single testimonial on the welcome page is now a slider holding two testimonials. Amanda Joy's comes first. The second is the new one from Marylisa Kinsley Manning of Dover, Delaware, USA, about working with Peter over Zoom after they met in the Edgar Cayce A.R.E. Institute's Past Life Regression class.
 
-The "Download your self-check" button in the self-check confirmation email now links to https://lightworkercoach.co.uk/where-is-your-practice-right-now-self-check-2/ instead of the old PDF upload. The email preview page was updated to match, so it shows exactly what visitors receive.
+The slider keeps the look of the original quote card: the soft lavender panel, the gold quote mark and the serif text. On phones visitors swipe sideways between the quotes, and each one snaps into place. On larger screens there are also gold previous and next arrows. Dots under the cards show which testimonial is on screen, and clicking a dot jumps to that one. Marylisa's longer quote is kept in its three original paragraphs. The quote text is a little smaller than before so both testimonials fit comfortably.
+
+The site also has a new favicon: a glowing gold sun with rays on a deep purple tile, in the same colours as the site.

@@ -34,3 +34,10 @@ body {
   background-clip: text;
   color: transparent;
 }
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}

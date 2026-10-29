@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import heroImg from "/images/hero.jpg";
 import typewriterImg from "/images/typewriter.jpg";
 import peterImg from "/images/peter.jpg";
@@ -33,6 +33,94 @@ const FORMS = {
 };
 
 const body = "text-[17px] sm:text-lg leading-relaxed text-night-900/90";
+
+const TESTIMONIALS = [
+  {
+    quote: [
+      "When I first met Peter, I was working from four o'clock in the morning until late at night… He saw my potential as a teacher and introduced me to the concept of moving from a one-to-one business model to a one-to-many approach. Those early conversations helped plant the seeds for what would ultimately become the Northern College of Clinical Hypnotherapy. Sometimes one conversation can change the direction of a business.",
+    ],
+    name: "Amanda Joy · Director of Studies, Northern College of Clinical Hypnotherapy",
+  },
+  {
+    quote: [
+      "I met Peter when we both took a class in hypnotherapy for Past Life Regression offered via Zoom by the Edgar Cayce A.R.E. Institute. We were paired several times during the class… After the class ended… we started meeting weekly on Zoom, discussing ways to expand my reach to others based on his long business experience.",
+      "I live in Dover, Delaware, USA, and Peter lives in England. The fact that we have never ‘shared air’ in the same room didn't hinder our interactions, or limit our success working together.",
+      "Peter's blend of experience with helping others grow a business plan, coupled with his spiritual connection, and ability to teach others is a potent and valuable combination.",
+    ],
+    name: "Marylisa Kinsley Manning · Dover, Delaware, USA",
+  },
+];
+
+function TestimonialSlider() {
+  const track = useRef<HTMLDivElement>(null);
+  const [active, setActive] = useState(0);
+
+  const goTo = (i: number) => {
+    const el = track.current;
+    if (!el) return;
+    const next = (i + TESTIMONIALS.length) % TESTIMONIALS.length;
+    el.scrollTo({ left: next * el.clientWidth, behavior: "smooth" });
+  };
+
+  const onScroll = () => {
+    const el = track.current;
+    if (el) setActive(Math.round(el.scrollLeft / el.clientWidth));
+  };
+
+  const arrow =
+    "hidden sm:flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-night-200 bg-white text-gold-600 transition hover:border-gold-500 hover:bg-gold-400/10";
+
+  return (
+    <div className="mx-auto mt-12 max-w-4xl" aria-roledescription="carousel" aria-label="Testimonials">
+      <div className="flex items-center gap-4">
+        <button type="button" onClick={() => goTo(active - 1)} className={arrow} aria-label="Previous testimonial">
+          <ArrowIcon className="h-5 w-5 rotate-180" />
+        </button>
+        <div
+          ref={track}
+          onScroll={onScroll}
+          className="no-scrollbar flex flex-1 snap-x snap-mandatory overflow-x-auto scroll-smooth"
+        >
+          {TESTIMONIALS.map((t, i) => (
+            <figure
+              key={t.name}
+              className="w-full shrink-0 snap-center rounded-2xl border border-night-100 bg-night-50/60 p-8 text-center sm:p-10"
+              aria-roledescription="slide"
+              aria-label={`${i + 1} of ${TESTIMONIALS.length}`}
+            >
+              <QuoteIcon className="mx-auto h-8 w-8 text-gold-500" />
+              <blockquote className="mt-4 space-y-4 font-serif text-xl font-normal leading-snug text-night-900 sm:text-2xl">
+                {t.quote.map((p, j) => (
+                  <p key={j}>
+                    {j === 0 && "“"}
+                    {p}
+                    {j === t.quote.length - 1 && "”"}
+                  </p>
+                ))}
+              </blockquote>
+              <figcaption className="mt-5 text-sm uppercase tracking-[0.2em] text-gold-600">{t.name}</figcaption>
+            </figure>
+          ))}
+        </div>
+        <button type="button" onClick={() => goTo(active + 1)} className={arrow} aria-label="Next testimonial">
+          <ArrowIcon className="h-5 w-5" />
+        </button>
+      </div>
+      <div className="mt-6 flex justify-center gap-3">
+        {TESTIMONIALS.map((t, i) => (
+          <button
+            key={t.name}
+            type="button"
+            onClick={() => goTo(i)}
+            aria-label={`Show testimonial ${i + 1}`}
+            aria-current={active === i}
+            className={`h-2.5 rounded-full transition-all ${active === i ? "w-8 bg-gold-500" : "w-2.5 bg-night-200 hover:bg-night-300"}`}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function Label({ children, center = false }: { children: ReactNode; center?: boolean }) {
   return (
@@ -317,19 +405,7 @@ export default function Welcome() {
             ))}
           </ol>
 
-          <figure className="mx-auto mt-12 max-w-3xl rounded-2xl border border-night-100 bg-night-50/60 p-8 text-center sm:p-10">
-            <QuoteIcon className="mx-auto h-8 w-8 text-gold-500" />
-            <blockquote className="mt-4 font-serif text-2xl font-normal leading-snug text-night-900 sm:text-3xl">
-              “When I first met Peter, I was working from four o'clock in the morning until late at
-              night… He saw my potential as a teacher and introduced me to the concept of moving from a
-              one-to-one business model to a one-to-many approach. Those early conversations helped
-              plant the seeds for what would ultimately become the Northern College of Clinical
-              Hypnotherapy. Sometimes one conversation can change the direction of a business.”
-            </blockquote>
-            <figcaption className="mt-5 text-sm uppercase tracking-[0.2em] text-gold-600">
-              Amanda Joy · Director of Studies, Northern College of Clinical Hypnotherapy
-            </figcaption>
-          </figure>
+          <TestimonialSlider />
         </div>
       </section>
 
