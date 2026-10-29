@@ -1,3 +1,5 @@
+import fs from "fs";
+import path from "path";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
@@ -22,21 +24,29 @@ async function fetchPdfBuffer() {
   }
 }
 
-// Fetch the logo once per function instance so it can be embedded (cid:logo) rather than
-// relying on remote images, which many mail clients block by default.
+// Load the logo once per function instance so it can be embedded (cid:logo) rather than
+// relying on remote images, which many mail clients block by default. The file is bundled
+// with the function (see included_files in netlify.toml); fetching it from the site is a fallback.
+const LOGO_FILE_CANDIDATES = [
+  path.join(process.cwd(), "public/images/email-logo.png"),
+  path.join(process.cwd(), "Welcome page only/public/images/email-logo.png"),
+];
+
 let logoBufferPromise = null;
 function getLogoBuffer() {
   if (!logoBufferPromise) {
-    logoBufferPromise = fetch(EMAIL_LOGO_URL)
-      .then(async (res) => {
-        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
-        return Buffer.from(await res.arrayBuffer());
-      })
-      .catch((err) => {
-        console.warn("Could not fetch email logo:", err.message);
-        logoBufferPromise = null;
-        return null;
-      });
+    const localPath = LOGO_FILE_CANDIDATES.find((p) => fs.existsSync(p));
+    logoBufferPromise = localPath
+      ? fs.promises.readFile(localPath)
+      : fetch(EMAIL_LOGO_URL).then(async (res) => {
+          if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+          return Buffer.from(await res.arrayBuffer());
+        });
+    logoBufferPromise = logoBufferPromise.catch((err) => {
+      console.warn("Could not load email logo:", err.message);
+      logoBufferPromise = null;
+      return null;
+    });
   }
   return logoBufferPromise;
 }

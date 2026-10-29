@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import heroImg from "/images/hero.jpg";
 import typewriterImg from "/images/typewriter.jpg";
 import peterImg from "/images/peter.jpg";
+import logoImg from "/images/email-logo.png";
 import { SunIcon, ArrowIcon, CheckIcon, QuoteIcon, MailIcon } from "../components/Icons";
 
 /*
@@ -222,13 +223,8 @@ export default function Welcome() {
         <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/60 to-transparent" />
 
         <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-8 sm:pb-28">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold-400/50 bg-gold-400/10 text-gold-500">
-              <SunIcon className="h-5 w-5" />
-            </span>
-            <span className="font-serif text-lg font-semibold tracking-wide text-night-900">
-              The Lightworker Coach
-            </span>
+          <div className="flex items-center">
+            <img src={logoImg} alt="Lightworker Coach" className="h-12 w-auto sm:h-14" />
           </div>
 
           <div className="mt-14 grid items-center gap-12 lg:mt-20 lg:grid-cols-[1.2fr_0.8fr]">
