@@ -594,7 +594,7 @@ export default async function handler(req, res) {
     const firstName = String(fields.first_name || fields.firstName || "friend").trim() || "friend";
     const email = String(fields.email || "").trim();
 
-    const downloadUrl = SITE_URL ? `${SITE_URL}/images/Where%20is%20your%20practice%20right%20now%20-%20self-check.pdf` : "";
+    const downloadUrl = "https://lightworkercoach.co.uk/wp-content/uploads/2026/10/Where-is-your-practice-right-now-self-check.pdf";
 
     // 1) Store submission in Neon/Postgres (non-fatal — emails still send if DB fails)
     try {
