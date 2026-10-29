@@ -1,10 +1,11 @@
-import fs from "fs";
-import path from "path";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
 // Public URL for the self-check PDF (hosted on Netlify images — same domain as the site)
 const SELF_CHECK_PDF_URL = "https://lightworkercoach.netlify.app/images/Where%20is%20your%20practice%20right%20now%20-%20self-check.pdf";
+
+// Header logo used in every outgoing email (served from public/images on the site)
+const EMAIL_LOGO_URL = `${process.env.DEPLOY_URL || process.env.URL || "https://lightworkercoach.netlify.app"}/images/email-logo.png`;
 
 // Fetch the PDF from the public URL at send time (Netlify does not bundle arbitrary files with functions)
 async function fetchPdfBuffer() {
@@ -21,21 +22,24 @@ async function fetchPdfBuffer() {
   }
 }
 
-const LOGO_PATH = path.join(process.cwd(), "Logo.png");
-
-let logoBuffer = null;
-if (fs.existsSync(LOGO_PATH)) {
-  try {
-    logoBuffer = fs.readFileSync(LOGO_PATH);
-  } catch (err) {
-    console.warn("Could not read logo:", err.message);
+// Fetch the logo once per function instance so it can be embedded (cid:logo) rather than
+// relying on remote images, which many mail clients block by default.
+let logoBufferPromise = null;
+function getLogoBuffer() {
+  if (!logoBufferPromise) {
+    logoBufferPromise = fetch(EMAIL_LOGO_URL)
+      .then(async (res) => {
+        if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
+        return Buffer.from(await res.arrayBuffer());
+      })
+      .catch((err) => {
+        console.warn("Could not fetch email logo:", err.message);
+        logoBufferPromise = null;
+        return null;
+      });
   }
+  return logoBufferPromise;
 }
-
-// Logo HTML for email headers (uses cid:logo embedded attachment)
-const logoHtml = logoBuffer
-  ? `<img src="cid:logo" alt="The Lightworker Coach" style="display:block;width:48px;height:48px;border-radius:50%;" />`
-  : `<span style="display:inline-block;width:48px;height:48px;background-color:#a67c2b;border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;"><span style="color:#ffffff;font-size:24px;line-height:1;">☀</span></span>`;
 
 // ============================================================
 // HELPERS
@@ -46,390 +50,209 @@ function escapeHtml(text) {
   return String(text ?? "").replace(/[&<>"']/g, (m) => map[m]);
 }
 
-// Brand colors (plum / lavender / gold palette matching the landing page)
+// Brand colors (white / cream / gold palette matching the landing page)
 const BRAND = {
-  plum: "#6b2a6b",
-  plumDark: "#4a1d4a",
-  lavender: "#e8daef",
-  lavenderLight: "#f3e9f7",
   gold: "#a67c2b",
-  goldLight: "#d9b15c",
-  night: "#0f172a",
-  nightSoft: "#1e293b",
+  goldSoft: "#d9b155",
   cream: "#f8f1e6",
+  sand: "#eadbc4",
+  night: "#0f172a",
+  nightSoft: "#334155",
+  muted: "#64748b",
   white: "#ffffff",
 };
+
+const SERIF = "'Cormorant Garamond',Georgia,'Times New Roman',serif";
+const SANS = "'Jost','Helvetica Neue',Helvetica,Arial,sans-serif";
+
+// ============================================================
+// EMAIL LAYOUT (shared header, footer and building blocks)
+// ============================================================
+
+function logoHtml(logoSrc) {
+  return `<img src="${logoSrc}" alt="Lightworker Coach" width="220" style="display:block;width:220px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;" />`;
+}
+
+// Small uppercase gold label with hairlines either side, as used for section labels on the site
+function labelHtml(text) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0" align="center"><tr>
+    <td style="width:32px;border-top:1px solid ${BRAND.goldSoft};font-size:0;line-height:0;">&nbsp;</td>
+    <td style="padding:0 10px;color:${BRAND.gold};font-family:${SANS};font-size:11px;letter-spacing:0.28em;text-transform:uppercase;white-space:nowrap;">${text}</td>
+    <td style="width:32px;border-top:1px solid ${BRAND.goldSoft};font-size:0;line-height:0;">&nbsp;</td>
+  </tr></table>`;
+}
+
+function buttonHtml(href, text) {
+  return `<table role="presentation" cellpadding="0" cellspacing="0"><tr>
+    <td align="center" style="border-radius:50px;background-color:${BRAND.gold};">
+      <a href="${href}" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:${SANS};font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;border:2px solid ${BRAND.gold};">${text} &rarr;</a>
+    </td>
+  </tr></table>`;
+}
+
+function detailRowsHtml(rows) {
+  return rows
+    .map(
+      ([label, value]) => `<tr>
+        <td valign="top" style="padding:12px 12px 12px 0;border-bottom:1px solid ${BRAND.sand};color:${BRAND.gold};font-family:${SANS};font-size:12px;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;width:34%;">${label}</td>
+        <td valign="top" style="padding:12px 0;border-bottom:1px solid ${BRAND.sand};color:${BRAND.night};font-family:${SANS};font-size:15px;line-height:1.6;">${value}</td>
+      </tr>`
+    )
+    .join("");
+}
+
+function emailLayout({ title, label, logoSrc, content, signOff = true }) {
+  const fromEmail = escapeHtml(process.env.SMTP_FROM_EMAIL || "");
+  return `
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${title}</title>
+</head>
+<body style="margin:0;padding:0;background-color:${BRAND.cream};font-family:${SANS};color:${BRAND.night};">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.cream};padding:32px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background-color:${BRAND.white};border:1px solid ${BRAND.sand};border-radius:28px;overflow:hidden;box-shadow:0 20px 40px rgba(234,219,196,0.6);">
+          <!-- Header -->
+          <tr>
+            <td align="center" style="padding:36px 32px 28px;background-color:${BRAND.white};">
+              ${logoHtml(logoSrc)}
+            </td>
+          </tr>
+          <tr>
+            <td align="center" style="padding:0 32px;">
+              ${labelHtml(label)}
+            </td>
+          </tr>
+
+          <!-- Body -->
+          <tr>
+            <td style="padding:32px 40px 40px;">
+              ${content}
+              ${
+                signOff
+                  ? `<p style="margin:32px 0 0;font-family:${SERIF};font-size:22px;font-style:italic;color:${BRAND.night};">With love and light, Peter</p>`
+                  : ""
+              }
+            </td>
+          </tr>
+
+          <!-- Footer -->
+          <tr>
+            <td align="center" style="padding:28px 32px;background-color:${BRAND.cream};border-top:1px solid ${BRAND.sand};color:${BRAND.muted};font-family:${SANS};font-size:12px;letter-spacing:0.06em;line-height:1.8;">
+              <span style="font-family:${SERIF};font-size:16px;font-weight:600;color:${BRAND.night};letter-spacing:0.02em;">The Lightworker Coach</span><br />
+              Helping those who help others<br />
+              ${fromEmail ? `<a href="mailto:${fromEmail}" style="color:${BRAND.gold};text-decoration:none;">${fromEmail}</a><br />` : ""}
+              &copy; 2026 Lightworker Coach Limited
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+`;
+}
+
+const headingStyle = `margin:0;font-family:${SERIF};font-size:30px;font-weight:600;line-height:1.2;color:${BRAND.night};`;
+const paragraphStyle = `margin:20px 0 0;font-family:${SANS};font-size:16px;line-height:1.75;color:${BRAND.nightSoft};`;
 
 // ============================================================
 // EMAIL CONTENT (HTML + plain text)
 // ============================================================
 
-function selfCheckHtml({ firstName, downloadUrl }) {
-  return `
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Your self-check is here</title>
-</head>
-<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Cormorant Garamond',Georgia,serif;color:${BRAND.night};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
-          <!-- Header -->
-          <tr>
-            <td align="center" style="background-color:${BRAND.plum};padding:32px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:12px;">
-                    ${logoHtml}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;letter-spacing:0.04em;">
-                    The Lightworker Coach
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.lavender};font-family:'Jost',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;padding-top:6px;">
-                    Helping those who help others
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding:40px 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;line-height:1.3;">
-                    Dear ${escapeHtml(firstName)},
-                  </td>
-                </tr>
-                <tr>
-                  <td align="left" style="padding-top:20px;color:${BRAND.nightSoft};font-family:'Jost',sans-serif;font-size:16px;line-height:1.7;">
-                    Thank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email. You can also download it using the button below.<br /><br />
-                    Take ten quiet minutes with it. There are no right or wrong answers. Just an honest look at where your practice is today, and the next gentle step.<br /><br />
-                    If you'd like to talk it through, simply reply to this email.
-                  </td>
-                </tr>
-
-                <!-- Download button -->
-                <tr>
-                  <td align="left" style="padding-top:32px;">
-                    <table role="presentation" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td align="left">
-                          ${
-                            downloadUrl
-                              ? `<a href="${escapeHtml(downloadUrl)}" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.gold};transition:all 0.2s;">Download Your Self-Check</a>`
-                              : `<span style="display:inline-block;background-color:${BRAND.goldLight};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.goldLight};">Download Your Self-Check</span>`
-                          }
-                        </td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:32px 24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:13px;letter-spacing:0.08em;line-height:1.6;">
-                    With love and light,<br />
-                    <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
-                    The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
-                    · © 2026 Lightworker Coach Limited
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
+function selfCheckHtml({ firstName, downloadUrl, logoSrc }) {
+  return emailLayout({
+    title: "Your self-check is here",
+    label: "Your free self-check",
+    logoSrc,
+    content: `
+      <h1 style="${headingStyle}">Dear ${escapeHtml(firstName)},</h1>
+      <p style="${paragraphStyle}">Thank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email. You can also download it using the button below.</p>
+      <p style="${paragraphStyle}">Take ten quiet minutes with it. There are no right or wrong answers. Just an honest look at where your practice is today, and the next gentle step.</p>
+      <p style="${paragraphStyle}">If you'd like to talk it through, simply reply to this email.</p>
+      ${downloadUrl ? `<div style="padding-top:32px;">${buttonHtml(escapeHtml(downloadUrl), "Download your self-check")}</div>` : ""}
+    `,
+  });
 }
 
-function callHtml({ firstName }) {
-  return `
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Your free call with Peter</title>
-</head>
-<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Cormorant Garamond',Georgia,serif;color:${BRAND.night};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
-          <!-- Header -->
-          <tr>
-            <td align="center" style="background-color:${BRAND.plum};padding:32px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:12px;">
-                    ${logoHtml}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;letter-spacing:0.04em;">
-                    The Lightworker Coach
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.lavender};font-family:'Jost',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;padding-top:6px;">
-                    Helping those who help others
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding:40px 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;line-height:1.3;">
-                    Dear ${escapeHtml(firstName)},
-                  </td>
-                </tr>
-                <tr>
-                  <td align="left" style="padding-top:20px;color:${BRAND.nightSoft};font-family:'Jost',sans-serif;font-size:16px;line-height:1.7;">
-                    Thank you for asking for a call.<br /><br />
-                    I'll email you within two working days with some times to choose from. I'm looking forward to hearing about your practice.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:32px 24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:13px;letter-spacing:0.08em;line-height:1.6;">
-                    With love and light,<br />
-                    <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
-                    The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
-                    · © 2026 Lightworker Coach Limited
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
+function callHtml({ firstName, logoSrc }) {
+  return emailLayout({
+    title: "Your free call with Peter",
+    label: "Your free 20-minute call",
+    logoSrc,
+    content: `
+      <h1 style="${headingStyle}">Dear ${escapeHtml(firstName)},</h1>
+      <p style="${paragraphStyle}">Thank you for asking for a call.</p>
+      <p style="${paragraphStyle}">I'll email you within two working days with some times to choose from. I'm looking forward to hearing about your practice.</p>
+    `,
+  });
 }
 
-function foundingHtml({ firstName }) {
-  return `
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Your founding place is reserved</title>
-</head>
-<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Cormorant Garamond',Georgia,serif;color:${BRAND.night};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
-          <!-- Header -->
-          <tr>
-            <td align="center" style="background-color:${BRAND.plum};padding:32px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:12px;">
-                    ${logoHtml}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;letter-spacing:0.04em;">
-                    The Lightworker Coach
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.lavender};font-family:'Jost',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;padding-top:6px;">
-                    Helping those who help others
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Body -->
-          <tr>
-            <td style="padding:40px 32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;line-height:1.3;">
-                    Dear ${escapeHtml(firstName)},
-                  </td>
-                </tr>
-                <tr>
-                  <td align="left" style="padding-top:20px;color:${BRAND.nightSoft};font-family:'Jost',sans-serif;font-size:16px;line-height:1.7;">
-                    Thank you. Your place as a founding member of my monthly letter is reserved, at £29 a month, locked in for as long as you stay.<br /><br />
-                    There's nothing to pay now. In December I'll email you a simple link to set up your monthly payment, and your first letter will arrive in January 2027.<br /><br />
-                    If anything changes for you before then, just reply to this email.
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:32px 24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:13px;letter-spacing:0.08em;line-height:1.6;">
-                    With love and light,<br />
-                    <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
-                    The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
-                    · © 2026 Lightworker Coach Limited
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
+function foundingHtml({ firstName, logoSrc }) {
+  return emailLayout({
+    title: "Your founding place is reserved",
+    label: "Founding member",
+    logoSrc,
+    content: `
+      <h1 style="${headingStyle}">Dear ${escapeHtml(firstName)},</h1>
+      <p style="${paragraphStyle}">Thank you. Your place as a founding member of my monthly letter is reserved, at <strong style="color:${BRAND.night};">£29 a month</strong>, locked in for as long as you stay.</p>
+      <p style="${paragraphStyle}">There's nothing to pay now. In December I'll email you a simple link to set up your monthly payment, and your first letter will arrive in January 2027.</p>
+      <p style="${paragraphStyle}">If anything changes for you before then, just reply to this email.</p>
+    `,
+  });
 }
 
-function peterCallNotificationHtml({ firstName, email, phone, helpWith }) {
-  return `
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>New free call request</title>
-</head>
-<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Jost',sans-serif;color:${BRAND.night};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
-          <!-- Header -->
-          <tr>
-            <td align="center" style="background-color:${BRAND.plum};padding:24px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:8px;">
-                    ${logoHtml}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:700;letter-spacing:0.04em;">
-                    New Free Call Request
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+// Notification sent to Peter for every form submission
+function peterNotificationHtml({ formType, firstName, email, fields, logoSrc }) {
+  const yesNo = (v) => (v ? "Yes" : "No");
+  const typeLabels = { selfCheck: "Self-check", call: "Free call", founding: "Founding member" };
+  const rows = [
+    ["Form", escapeHtml(typeLabels[formType] || formType)],
+    ["Name", escapeHtml(formType === "founding" ? `${firstName} ${fields.last_name || ""}`.trim() : firstName)],
+    ["Email", `<a href="mailto:${escapeHtml(email)}" style="color:${BRAND.gold};text-decoration:none;">${escapeHtml(email)}</a>`],
+  ];
+  if (formType === "call") {
+    rows.push(["Phone", escapeHtml(fields.phone || "Not provided")]);
+    rows.push(["Help with", escapeHtml(fields.help_with || "Not provided")]);
+  } else if (formType === "founding") {
+    rows.push(["Address", `${escapeHtml(fields.address_1 || "")} ${escapeHtml(fields.address_2 || "")}`.trim()]);
+    rows.push(["Town / Postcode / Country", `${escapeHtml(fields.town || "")}, ${escapeHtml(fields.postcode || "")}, ${escapeHtml(fields.country || "")}`]);
+    rows.push(["Letter topics", escapeHtml(fields.letter_topics || "")]);
+    rows.push(["Reserve confirm", yesNo(fields.reserve_confirm)]);
+  }
+  if (formType !== "call") rows.push(["Marketing consent", yesNo(fields.marketing_consent)]);
 
-          <!-- Details -->
-          <tr>
-            <td style="padding:32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;">
-                    ${escapeHtml(firstName)} would like to book a free call
-                  </td>
-                </tr>
-                <tr>
-                  <td align="left" style="padding-top:24px;color:${BRAND.nightSoft};font-size:15px;line-height:1.7;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Name</td>
-                        <td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(firstName)}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Email</td>
-                        <td style="padding:8px 0;color:${BRAND.night};"><a href="mailto:${escapeHtml(email)}" style="color:${BRAND.gold};text-decoration:none;">${escapeHtml(email)}</a></td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Phone</td>
-                        <td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(phone || "Not provided")}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Help with</td>
-                        <td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(helpWith || "Not provided")}</td>
-                      </tr>
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
+  const headings = {
+    selfCheck: `${escapeHtml(firstName)} asked for the self-check`,
+    call: `${escapeHtml(firstName)} would like a free call`,
+    founding: `${escapeHtml(firstName)} reserved a founding place`,
+  };
+  const replySubjects = {
+    selfCheck: "Re%3A%20Your%20self-check",
+    call: "Re%3A%20Your%20free%20call%20with%20Peter",
+    founding: "Re%3A%20Your%20founding%20place",
+  };
 
-          <!-- Reply button -->
-          <tr>
-            <td align="left" style="padding:32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left">
-                    <a href="mailto:${escapeHtml(email)}?subject=Re%3A%20Your%20free%20call%20with%20Peter" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:50px;padding:12px 28px;text-align:center;border:2px solid ${BRAND.gold};">
-                      Reply to ${escapeHtml(firstName)}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:12px;letter-spacing:0.08em;line-height:1.6;">
-                    The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
-                    · © 2026 Lightworker Coach Limited
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-`;
+  return emailLayout({
+    title: `New ${typeLabels[formType] || formType} submission`,
+    label: "New submission",
+    logoSrc,
+    signOff: false,
+    content: `
+      <h1 style="${headingStyle}">${headings[formType] || `New submission from ${escapeHtml(firstName)}`}</h1>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;border-top:1px solid ${BRAND.sand};">
+        ${detailRowsHtml(rows)}
+      </table>
+      <div style="padding-top:32px;">${buttonHtml(`mailto:${escapeHtml(email)}?subject=${replySubjects[formType] || "Re%3A%20Your%20enquiry"}`, `Reply to ${escapeHtml(firstName)}`)}</div>
+    `,
+  });
 }
+
 
 // ============================================================
 // ENVIRONMENT VARIABLES (set these in Netlify dashboard)
@@ -614,15 +437,20 @@ export const handler = async (event, context) => {
     // 2) Send emails
     const transporter = buildTransporter();
 
+    const logoBuffer = await getLogoBuffer();
+    const logoSrc = logoBuffer ? "cid:logo" : EMAIL_LOGO_URL;
+    const logoAttachment = () =>
+      logoBuffer ? [{ filename: "email-logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [];
+
     let htmlBody, plainBody;
     if (formType === "selfCheck") {
-      htmlBody = selfCheckHtml({ firstName, downloadUrl });
+      htmlBody = selfCheckHtml({ firstName, downloadUrl, logoSrc });
       plainBody = `Dear ${firstName},\n\nThank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email.\n\nTake ten quiet minutes with it.\n\nWith love and light, Peter`;
     } else if (formType === "call") {
-      htmlBody = callHtml({ firstName });
+      htmlBody = callHtml({ firstName, logoSrc });
       plainBody = `Dear ${firstName},\n\nThank you for asking for a call. I'll email you within two working days.\n\nWith love and light, Peter`;
     } else if (formType === "founding") {
-      htmlBody = foundingHtml({ firstName });
+      htmlBody = foundingHtml({ firstName, logoSrc });
       plainBody = `Dear ${firstName},\n\nYour founding member place is reserved.\n\nWith love and light, Peter`;
     }
 
@@ -633,7 +461,7 @@ export const handler = async (event, context) => {
       text: plainBody,
       html: htmlBody,
       replyTo: SMTP_FROM_EMAIL,
-      attachments: logoBuffer ? [{ filename: "Logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [],
+      attachments: logoAttachment(),
     };
 
     if (formType === "selfCheck") {
@@ -647,114 +475,14 @@ export const handler = async (event, context) => {
 
     // Peter notification for ALL form submissions
     const peterSubjects = { selfCheck: `New self-check from ${firstName}`, call: `New call request from ${firstName}`, founding: `New founding member from ${firstName}` };
-    const peterDetailsHtml = formType === "selfCheck"
-      ? `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Self-check</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Marketing Consent</td><td style="padding:8px 0;color:${BRAND.night};">${fields.marketing_consent ? "Yes" : "No"}</td></tr>`
-      : formType === "call"
-        ? `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Free Call</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Phone</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.phone || "Not provided")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Help With</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.help_with || "Not provided")}</td></tr>`
-        : `<tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Form Type</td><td style="padding:8px 0;color:${BRAND.night};">Founding Member</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Last Name</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.last_name || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Address</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.address_1 || "")} ${escapeHtml(fields.address_2 || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Town / Postcode / Country</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.town || "")}, ${escapeHtml(fields.postcode || "")}, ${escapeHtml(fields.country || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Letter Topics</td><td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(fields.letter_topics || "")}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Reserve Confirm</td><td style="padding:8px 0;color:${BRAND.night};">${fields.reserve_confirm ? "Yes" : "No"}</td></tr><tr><td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Marketing Consent</td><td style="padding:8px 0;color:${BRAND.night};">${fields.marketing_consent ? "Yes" : "No"}</td></tr>`;
-
     await transporter.sendMail({
       from: `"${SMTP_FROM_NAME}" <${SMTP_FROM_EMAIL}>`,
       to: NOTIFY_TO,
       subject: peterSubjects[formType],
       text: `New ${formType} submission:\n\nName: ${firstName}\nEmail: ${email}\n${formType === "selfCheck" ? `Marketing: ${fields.marketing_consent ? "Yes" : "No"}` : formType === "call" ? `Phone: ${fields.phone || "Not provided"}\nHelp with: ${fields.help_with || "Not provided"}` : `Founding member: ${firstName} ${fields.last_name || ""}\nAddress: ${fields.address_1 || ""}, ${fields.town || ""}, ${fields.postcode || ""}\nCountry: ${fields.country || ""}\nLetter topics: ${fields.letter_topics || ""}\nReserve: ${fields.reserve_confirm ? "Yes" : "No"}\nMarketing: ${fields.marketing_consent ? "Yes" : "No"}`}`,
-      html: `
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>New ${formType} Submission</title>
-</head>
-<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Jost',sans-serif;color:${BRAND.night};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
-    <tr>
-      <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
-          <!-- Header -->
-          <tr>
-            <td align="center" style="background-color:${BRAND.plum};padding:24px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="padding-bottom:8px;">
-                    ${logoHtml}
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:24px;font-weight:700;letter-spacing:0.04em;">
-                    New ${formType.charAt(0).toUpperCase() + formType.slice(1)} Submission
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Details -->
-          <tr>
-            <td style="padding:32px;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;">
-                    New Submission Details
-                  </td>
-                </tr>
-                <tr>
-                  <td align="left" style="padding-top:24px;color:${BRAND.nightSoft};font-size:15px;line-height:1.7;">
-                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                      <tr>
-                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Name</td>
-                        <td style="padding:8px 0;color:${BRAND.night};">${escapeHtml(firstName)}</td>
-                      </tr>
-                      <tr>
-                        <td style="padding:8px 0;color:${BRAND.plumDark};font-weight:600;width:30%;">Email</td>
-                        <td style="padding:8px 0;color:${BRAND.night};"><a href="mailto:${escapeHtml(email)}" style="color:${BRAND.gold};text-decoration:none;">${escapeHtml(email)}</a></td>
-                      </tr>
-                      ${peterDetailsHtml}
-                    </table>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Reply button -->
-          <tr>
-            <td align="left" style="padding:32px;">
-              <table role="presentation" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="left">
-                    <a href="mailto:${escapeHtml(email)}?subject=Re%3A%20New%20${formType.charAt(0).toUpperCase() + formType.slice(1)}%20submission" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:15px;font-weight:600;text-decoration:none;border-radius:50px;padding:12px 28px;text-align:center;border:2px solid ${BRAND.gold};">
-                      Reply to ${escapeHtml(firstName)}
-                    </a>
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Footer -->
-          <tr>
-            <td align="center" style="padding:24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:12px;letter-spacing:0.08em;line-height:1.6;">
-                    The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
-                    · © 2026 Lightworker Coach Limited
-                  </td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  </table>
-</body>
-</html>
-      `,
+      html: peterNotificationHtml({ formType, firstName, email, fields, logoSrc }),
       replyTo: email,
-      attachments: logoBuffer ? [{ filename: "Logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [],
+      attachments: logoAttachment(),
     });
 
     return {
