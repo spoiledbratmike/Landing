@@ -245,7 +245,7 @@ export default function Welcome() {
                 free 20-minute call if you'd like to talk, and a founding place in my monthly letter
                 for healers.
               </p>
-              <p className="mt-5 font-hand text-3xl text-night-800">With love and light, Peter</p>
+              <p className="mt-5 text-3xl text-night-800" style={{fontFamily: '"Segoe Script", "Comic Sans MS", cursive'}}>With love and light, Peter</p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <a

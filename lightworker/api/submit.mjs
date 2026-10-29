@@ -65,30 +65,25 @@ function selfCheckHtml({ firstName, downloadUrl }) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Your self-check is here</title>
 </head>
-<body style="margin:0;padding:0;background-color:${BRAND.lavenderLight};font-family:'Cormorant Garamond',Georgia,serif;color:${BRAND.night};">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.lavenderLight};padding:24px 12px;">
+<body style="margin:0;padding:0;background-color:#fdfaf5;font-family:'Cormorant Garamond',Georgia,serif;color:#281c46;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:#fdfaf5;padding:24px 12px;">
     <tr>
       <td align="center">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:${BRAND.white};border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.08);">
-          <!-- Header -->
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:640px;background-color:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 12px 40px rgba(0,0,0,0.06);">
+          <!-- Header: Logo + small heading -->
           <tr>
-            <td align="center" style="background-color:${BRAND.plum};padding:32px 24px;background-image:linear-gradient(135deg,${BRAND.plum} 0%,${BRAND.plumDark} 100%);">
+            <td align="center" style="padding:32px 24px 16px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="padding-bottom:12px;">
-                    <span style="display:inline-block;width:48px;height:48px;background-color:${BRAND.gold};border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;">
-                      <span style="color:${BRAND.white};font-size:24px;line-height:1;">☀</span>
+                  <td align="center" style="padding-bottom:10px;">
+                    <span style="display:inline-block;width:48px;height:48px;background-color:#a67c2b;border-radius:50%;line-height:48px;text-align:center;vertical-align:middle;">
+                      <span style="color:#ffffff;font-size:24px;line-height:1;">☀</span>
                     </span>
                   </td>
                 </tr>
                 <tr>
-                  <td align="center" style="color:${BRAND.white};font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;letter-spacing:0.04em;">
-                    The Lightworker Coach
-                  </td>
-                </tr>
-                <tr>
-                  <td align="center" style="color:${BRAND.lavender};font-family:'Jost',sans-serif;font-size:14px;letter-spacing:0.12em;text-transform:uppercase;padding-top:6px;">
-                    Helping those who help others
+                  <td align="center" style="color:#a67c2b;font-family:'Jost',sans-serif;font-size:13px;letter-spacing:0.2em;text-transform:uppercase;font-weight:600;">
+                    YOUR FREE SELF-CHECK
                   </td>
                 </tr>
               </table>
@@ -97,17 +92,16 @@ function selfCheckHtml({ firstName, downloadUrl }) {
 
           <!-- Body -->
           <tr>
-            <td style="padding:40px 32px;">
+            <td style="padding:0 32px 32px 32px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="left" style="color:${BRAND.night};font-family:'Cormorant Garamond',Georgia,serif;font-size:22px;font-weight:600;line-height:1.3;">
+                  <td align="left" style="color:#281c46;font-family:'Cormorant Garamond',Georgia,serif;font-size:28px;font-weight:700;line-height:1.2;">
                     Dear ${escapeHtml(firstName)},
                   </td>
                 </tr>
                 <tr>
-                  <td align="left" style="padding-top:20px;color:${BRAND.nightSoft};font-family:'Jost',sans-serif;font-size:16px;line-height:1.7;">
-                    Thank you for patiently listening to me on Friday's call, and for asking for the self-check.<br /><br />
-                    Your self-check is attached to this email. You can also download it using the button below.<br /><br />
+                  <td align="left" style="padding-top:24px;color:#4a4a4a;font-family:'Jost',sans-serif;font-size:16px;line-height:1.7;">
+                    Thank you for patiently listening to me on Friday's call, and for asking for the self-check. Your self-check is attached to this email. You can also download it using the button below.<br /><br />
                     Take ten quiet minutes with it. There are no right or wrong answers. Just an honest look at where your practice is today, and the next gentle step.<br /><br />
                     If you'd like to talk it through, simply reply to this email.
                   </td>
@@ -115,14 +109,14 @@ function selfCheckHtml({ firstName, downloadUrl }) {
 
                 <!-- Download button -->
                 <tr>
-                  <td align="left" style="padding-top:32px;">
+                  <td align="left" style="padding-top:36px;">
                     <table role="presentation" cellpadding="0" cellspacing="0">
                       <tr>
                         <td align="left">
                           ${
                             downloadUrl
-                              ? `<a href="${escapeHtml(downloadUrl)}" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.gold};transition:all 0.2s;">Download Your Self-Check</a>`
-                              : `<span style="display:inline-block;background-color:${BRAND.goldLight};color:${BRAND.white};font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid ${BRAND.goldLight};">Download Your Self-Check</span>`
+                              ? `<a href="${escapeHtml(downloadUrl)}" style="display:inline-block;background-color:#a67c2b;color:#ffffff;font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid #a67c2b;transition:all 0.2s;">Download your self-check →</a>`
+                              : `<span style="display:inline-block;background-color:#d9b15c;color:#ffffff;font-family:'Jost',sans-serif;font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;text-align:center;border:2px solid #d9b15c;">Download your self-check →</span>`
                           }
                         </td>
                       </tr>
@@ -133,16 +127,16 @@ function selfCheckHtml({ firstName, downloadUrl }) {
             </td>
           </tr>
 
-          <!-- Footer -->
+          <!-- Footer: clean, no colored background -->
           <tr>
-            <td align="center" style="padding:32px 24px;background-color:${BRAND.lavender};border-top:1px solid ${BRAND.plum}22;">
+            <td align="center" style="padding:32px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                 <tr>
-                  <td align="center" style="color:${BRAND.plumDark};font-family:'Jost',sans-serif;font-size:13px;letter-spacing:0.08em;line-height:1.6;">
+                  <td align="center" style="color:#4a4a4a;font-family:'Jost',sans-serif;font-size:14px;letter-spacing:0.04em;line-height:1.8;">
                     With love and light,<br />
-                    <span style="font-family:'Cormorant Garamond',Georgia,serif;font-size:20px;font-weight:600;color:${BRAND.night};">Peter</span><br /><br />
+                    <span style="font-family:'Segoe Script','Comic Sans MS',cursive;font-size:24px;font-weight:600;color:#281c46;">Peter</span><br /><br />
                     The Lightworker Coach · Helping those who help others<br />
-                    <a href="mailto:${process.env.SMTP_FROM_EMAIL}" style="color:${BRAND.gold};text-decoration:none;">${process.env.SMTP_FROM_EMAIL}</a><br />
+                    <a href="mailto:hello@lightworkercoach.co.uk" style="color:#a67c2b;text-decoration:none;">hello@lightworkercoach.co.uk</a><br />
                     · © 2026 Lightworker Coach Limited
                   </td>
                 </tr>
