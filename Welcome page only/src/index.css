@@ -1,2 +1,36 @@
 /* Tailwind CSS v4 */
 @import "tailwindcss";
+
+@theme {
+  /* The welcome page's four Google Fonts (loaded in index.html) */
+  --font-sans: "Jost", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-typewriter: "Courier Prime", "Courier New", Courier, monospace;
+  --font-hand: "Caveat", "Segoe Script", "Bradley Hand", cursive;
+
+  /* Gold: #C1953A for buttons, #A67C2B for accents */
+  --color-gold-400: #d9b155;
+  --color-gold-500: #c1953a;
+  --color-gold-600: #a67c2b;
+
+  /* Deep "night" purples for text */
+  --color-night-50: #f7f5fb;
+  --color-night-100: #ece8f4;
+  --color-night-200: #d9d2e8;
+  --color-night-300: #bcb1d4;
+  --color-night-700: #5b4d80;
+  --color-night-800: #3a2a63;
+  --color-night-900: #281c46;
+}
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-night-900);
+}
+
+.gold-text {
+  background: linear-gradient(90deg, var(--color-gold-600), var(--color-gold-500));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}

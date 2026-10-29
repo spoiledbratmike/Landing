@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent, type ReactNode } from "react";
 import heroImg from "/images/hero.jpg";
 import typewriterImg from "/images/typewriter.jpg";
 import peterImg from "/images/peter.jpg";
+import logoImg from "/images/email-logo.png";
 import { SunIcon, ArrowIcon, CheckIcon, QuoteIcon, MailIcon } from "../components/Icons";
 
 /*
@@ -36,7 +37,7 @@ const body = "text-[17px] sm:text-lg leading-relaxed text-night-900/90";
 function Label({ children, center = false }: { children: ReactNode; center?: boolean }) {
   return (
     <span
-      className={`inline-flex items-center gap-2 font-typewriter text-xs uppercase tracking-[0.28em] text-gold-600 ${center ? "justify-center" : ""}`}
+      className={`inline-flex items-center gap-2 font-sans text-xs font-medium uppercase tracking-[0.28em] text-gold-600 ${center ? "justify-center" : ""}`}
     >
       <span className="h-px w-8 bg-gold-500/60" />
       {children}
@@ -97,7 +98,7 @@ function Tick({ name, required = false, children }: { name: string; required?: b
         type="checkbox"
         name={name}
         required={required}
-        className="mt-1 h-5 w-5 shrink-0 rounded border-night-300 accent-[#a67c2b]"
+        className="mt-1 h-5 w-5 shrink-0 rounded border-night-300 accent-[#c1953a]"
       />
       <span>{children}</span>
     </label>
@@ -110,12 +111,12 @@ function GoldButton({ children }: { children: ReactNode }) {
       type="submit"
       className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gold-500 px-7 py-4 text-base font-semibold text-white transition-all hover:bg-gold-600 hover:shadow-[0_0_40px_-8px_rgba(217,177,85,0.7)] sm:w-auto"
       style={{
-        backgroundColor: "#a67c2b",
+        backgroundColor: "#c1953a",
         color: "white",
         borderRadius: "50px",
         padding: "14px 32px",
         fontWeight: "600",
-        border: "2px solid #a67c2b",
+        border: "2px solid #c1953a",
         width: "100%",
         textAlign: "center",
         fontSize: "1rem",
@@ -222,13 +223,8 @@ export default function Welcome() {
         <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-white/60 to-transparent" />
 
         <div className="relative mx-auto max-w-7xl px-6 pb-20 pt-8 sm:pb-28">
-          <div className="flex items-center gap-3">
-            <span className="flex h-10 w-10 items-center justify-center rounded-full border border-gold-400/50 bg-gold-400/10 text-gold-500">
-              <SunIcon className="h-5 w-5" />
-            </span>
-            <span className="font-serif text-lg font-semibold tracking-wide text-night-900">
-              The Lightworker Coach
-            </span>
+          <div className="flex items-center">
+            <img src={logoImg} alt="Lightworker Coach" className="h-12 w-auto sm:h-14" />
           </div>
 
           <div className="mt-14 grid items-center gap-12 lg:mt-20 lg:grid-cols-[1.2fr_0.8fr]">
@@ -245,7 +241,7 @@ export default function Welcome() {
                 free 20-minute call if you'd like to talk, and a founding place in my monthly letter
                 for healers.
               </p>
-              <p className="mt-5 font-hand text-3xl text-night-800">With love and light, Peter</p>
+              <p className="mt-5 font-hand text-[30px] font-medium text-night-800">With love and light, Peter</p>
 
               <div className="mt-9 flex flex-col gap-4 sm:flex-row sm:flex-wrap">
                 <a
@@ -323,7 +319,7 @@ export default function Welcome() {
 
           <figure className="mx-auto mt-12 max-w-3xl rounded-2xl border border-night-100 bg-night-50/60 p-8 text-center sm:p-10">
             <QuoteIcon className="mx-auto h-8 w-8 text-gold-500" />
-            <blockquote className="mt-4 font-serif text-xl leading-snug text-night-900 sm:text-2xl">
+            <blockquote className="mt-4 font-serif text-2xl font-normal leading-snug text-night-900 sm:text-3xl">
               “When I first met Peter, I was working from four o'clock in the morning until late at
               night… He saw my potential as a teacher and introduced me to the concept of moving from a
               one-to-one business model to a one-to-many approach. Those early conversations helped
