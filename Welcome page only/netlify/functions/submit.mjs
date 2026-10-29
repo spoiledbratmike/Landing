@@ -60,20 +60,27 @@ function escapeHtml(text) {
   return String(text ?? "").replace(/[&<>"']/g, (m) => map[m]);
 }
 
-// Brand colors (white / cream / gold palette matching the landing page)
+// Brand colors matching the landing page: gold for buttons/accents, deep "night" purples for text
 const BRAND = {
+  goldButton: "#c1953a",
   gold: "#a67c2b",
   goldSoft: "#d9b155",
   cream: "#f8f1e6",
   sand: "#eadbc4",
-  night: "#0f172a",
-  nightSoft: "#334155",
-  muted: "#64748b",
+  night: "#281c46",
+  nightSignature: "#3a2a63",
+  nightSoft: "#4a3d6b",
+  muted: "#6e6390",
   white: "#ffffff",
 };
 
+// The four Google Fonts used on the welcome page (with email-safe fallbacks)
 const SERIF = "'Cormorant Garamond',Georgia,'Times New Roman',serif";
 const SANS = "'Jost','Helvetica Neue',Helvetica,Arial,sans-serif";
+const TYPEWRITER = "'Courier Prime','Courier New',Courier,monospace";
+const HAND = "'Caveat','Segoe Script','Bradley Hand',cursive";
+const GOOGLE_FONTS_URL =
+  "https://fonts.googleapis.com/css2?family=Caveat:wght@500&family=Cormorant+Garamond:wght@400;500;600;700&family=Courier+Prime&family=Jost:wght@300;400;500;600&display=swap";
 
 // ============================================================
 // EMAIL LAYOUT (shared header, footer and building blocks)
@@ -94,8 +101,8 @@ function labelHtml(text) {
 
 function buttonHtml(href, text) {
   return `<table role="presentation" cellpadding="0" cellspacing="0"><tr>
-    <td align="center" style="border-radius:50px;background-color:${BRAND.gold};">
-      <a href="${href}" style="display:inline-block;background-color:${BRAND.gold};color:${BRAND.white};font-family:${SANS};font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;border:2px solid ${BRAND.gold};">${text} &rarr;</a>
+    <td align="center" style="border-radius:50px;background-color:${BRAND.goldButton};">
+      <a href="${href}" style="display:inline-block;background-color:${BRAND.goldButton};color:${BRAND.white};font-family:${SANS};font-size:16px;font-weight:600;text-decoration:none;border-radius:50px;padding:14px 32px;border:2px solid ${BRAND.goldButton};">${text} &rarr;</a>
     </td>
   </tr></table>`;
 }
@@ -120,6 +127,8 @@ function emailLayout({ title, label, logoSrc, content, signOff = true }) {
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${title}</title>
+<link href="${GOOGLE_FONTS_URL}" rel="stylesheet" />
+<style>@import url("${GOOGLE_FONTS_URL}");</style>
 </head>
 <body style="margin:0;padding:0;background-color:${BRAND.cream};font-family:${SANS};color:${BRAND.night};">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background-color:${BRAND.cream};padding:32px 12px;">
@@ -144,7 +153,7 @@ function emailLayout({ title, label, logoSrc, content, signOff = true }) {
               ${content}
               ${
                 signOff
-                  ? `<p style="margin:32px 0 0;font-family:${SERIF};font-size:22px;font-style:italic;color:${BRAND.night};">With love and light, Peter</p>`
+                  ? `<p style="margin:32px 0 0;font-family:${HAND};font-size:30px;font-weight:500;line-height:1.2;color:${BRAND.nightSignature};">With love and light, Peter</p>`
                   : ""
               }
             </td>
@@ -211,7 +220,14 @@ function foundingHtml({ firstName, logoSrc }) {
     content: `
       <h1 style="${headingStyle}">Dear ${escapeHtml(firstName)},</h1>
       <p style="${paragraphStyle}">Thank you. Your place as a founding member of my monthly letter is reserved, at <strong style="color:${BRAND.night};">£29 a month</strong>, locked in for as long as you stay.</p>
-      <p style="${paragraphStyle}">There's nothing to pay now. In December I'll email you a simple link to set up your monthly payment, and your first letter will arrive in January 2027.</p>
+      <p style="${paragraphStyle}">There's nothing to pay now. In December I'll email you a simple link to set up your monthly payment.</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
+        <tr>
+          <td style="padding:20px 24px;background-color:${BRAND.cream};border:1px solid ${BRAND.sand};border-radius:16px;font-family:${TYPEWRITER};font-size:15px;line-height:1.7;color:${BRAND.night};">
+            A letter through your door, every month.<br />Your first one arrives in January 2027.
+          </td>
+        </tr>
+      </table>
       <p style="${paragraphStyle}">If anything changes for you before then, just reply to this email.</p>
     `,
   });
