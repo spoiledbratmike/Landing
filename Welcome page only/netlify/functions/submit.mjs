@@ -454,7 +454,7 @@ export const handler = async (event, context) => {
     const firstName = String(fields.first_name || fields.firstName || "friend").trim() || "friend";
     const email = String(fields.email || "").trim();
 
-    const downloadUrl = "https://lightworkercoach.co.uk/wp-content/uploads/2026/10/Where-is-your-practice-right-now-self-check.pdf";
+    const downloadUrl = "https://lightworkercoach.co.uk/where-is-your-practice-right-now-self-check-2/";
 
     // 1) Store submission in Neon/Postgres (non-fatal)
     try { await storeSubmission(formType, fields); }

@@ -1,7 +1,3 @@
-The new Lightworker Coach logo (the blue lotus with the "Lightworker Coach" wordmark) now appears in the website header and is reliably included in every outgoing email.
+The self-check PDF was replaced with the newly supplied version of "Where is your practice right now – self-check". All copies of the file in the project were updated, including the one served from the site, so the PDF attached to the visitor's self-check confirmation email is now the new document.
 
-**Website header.** The top of the homepage still showed the old gold sun icon next to the text "The Lightworker Coach". The earlier update only changed the email templates, never the website itself. That icon and text have been replaced with the new logo image.
-
-**Emails.** Previously the emails downloaded the logo from the live website each time one was sent. That only works once the site with the new logo is live. Before then the download failed, so the emails could show a broken or missing logo. The logo file is now packaged with the email-sending code and embedded in each email directly. Downloading it from the website is kept only as a backup.
-
-None of this shows on the main site address until the update is published. Emails sent through the current live site still use the old design and logo until then.
+The "Download your self-check" button in the self-check confirmation email now links to https://lightworkercoach.co.uk/where-is-your-practice-right-now-self-check-2/ instead of the old PDF upload. The email preview page was updated to match, so it shows exactly what visitors receive.
