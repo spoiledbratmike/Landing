@@ -4,26 +4,34 @@ import { fileURLToPath } from "url";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
-// Get __dirname equivalent for ESM
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Public URL for the self-check PDF (hosted on WordPress — not on Netlify)
+const SELF_CHECK_PDF_URL = "https://lightworkercoach.co.uk/wp-content/uploads/2026/10/Where-is-your-practice-right-now-self-check.pdf";
 
-// Path to the self-check PDF (bundled with the function deployment)
-const SELF_CHECK_PDF_PATH = path.join(__dirname, "Where is your practice right now - self-check.pdf");
-
-// Read the PDF once at cold start (if it exists)
-let selfCheckPdfBuffer = null;
-try {
-  if (fs.existsSync(SELF_CHECK_PDF_PATH)) {
-    selfCheckPdfBuffer = fs.readFileSync(SELF_CHECK_PDF_PATH);
+// Fetch the PDF from the public URL at send time
+async function fetchPdfBuffer() {
+  try {
+    const res = await fetch(SELF_CHECK_PDF_URL);
+    if (!res.ok) {
+      console.warn(`Could not fetch self-check PDF: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    return Buffer.from(await res.arrayBuffer());
+  } catch (err) {
+    console.warn("Could not fetch self-check PDF:", err.message);
+    return null;
   }
-} catch (err) {
-  console.warn("Could not read self-check PDF:", err.message);
 }
 
-// ============================================================
-// HELPERS
-// ============================================================
+// Read the logo once at cold start
+let logoBuffer = null;
+try {
+  const LOGO_PATH = path.join(path.dirname(fileURLToPath(import.meta.url)), "Logo.png");
+  if (fs.existsSync(LOGO_PATH)) {
+    logoBuffer = fs.readFileSync(LOGO_PATH);
+  }
+} catch (err) {
+  console.warn("Could not read logo:", err.message);
+}
 
 function escapeHtml(text) {
   const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
@@ -635,14 +643,17 @@ export default async function handler(req, res) {
     };
 
     // Attach self-check PDF for self-check form
-    if (formType === "selfCheck" && selfCheckPdfBuffer) {
-      mailOptions.attachments = [
-        {
-          filename: "Where is your practice right now - self-check.pdf",
-          content: selfCheckPdfBuffer,
-          contentType: "application/pdf",
-        },
-      ];
+    if (formType === "selfCheck") {
+      const pdfBuffer = await fetchPdfBuffer();
+      if (pdfBuffer) {
+        mailOptions.attachments = [
+          {
+            filename: "Where is your practice right now - self-check.pdf",
+            content: pdfBuffer,
+            contentType: "application/pdf",
+          },
+        ];
+      }
     }
 
     await transporter.sendMail(mailOptions);

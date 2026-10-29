@@ -3,47 +3,28 @@ import path from "path";
 import nodemailer from "nodemailer";
 import { Pool } from "pg";
 
-// ============================================================
-// FILE PATHS - Try multiple locations for Netlify bundler compatibility
-// ============================================================
+// Public URL for the self-check PDF (hosted on WordPress — not on Netlify)
+const SELF_CHECK_PDF_URL = "https://lightworkercoach.co.uk/wp-content/uploads/2026/10/Where-is-your-practice-right-now-self-check.pdf";
 
-function findFile(...possiblePaths) {
-  for (const p of possiblePaths) {
-    try {
-      if (fs.existsSync(p)) {
-        return p;
-      }
-    } catch {
-      // try next
-    }
-  }
-  return null;
-}
-
-const SELF_CHECK_PDF_PATH = findFile(
-  path.join(process.cwd(), "Where is your practice right now - self-check.pdf"),
-  path.join(process.cwd(), "netlify/functions", "Where is your practice right now - self-check.pdf"),
-  "Where is your practice right now - self-check.pdf",
-);
-
-const LOGO_PATH = findFile(
-  path.join(process.cwd(), "Logo.png"),
-  path.join(process.cwd(), "netlify/functions", "Logo.png"),
-  "Logo.png",
-);
-
-// Read files once at cold start
-let selfCheckPdfBuffer = null;
-if (SELF_CHECK_PDF_PATH) {
+// Fetch the PDF from the public URL at send time (Netlify does not bundle arbitrary files with functions)
+async function fetchPdfBuffer() {
   try {
-    selfCheckPdfBuffer = fs.readFileSync(SELF_CHECK_PDF_PATH);
+    const res = await fetch(SELF_CHECK_PDF_URL);
+    if (!res.ok) {
+      console.warn(`Could not fetch self-check PDF: ${res.status} ${res.statusText}`);
+      return null;
+    }
+    return Buffer.from(await res.arrayBuffer());
   } catch (err) {
-    console.warn("Could not read self-check PDF:", err.message);
+    console.warn("Could not fetch self-check PDF:", err.message);
+    return null;
   }
 }
+
+const LOGO_PATH = path.join(process.cwd(), "Logo.png");
 
 let logoBuffer = null;
-if (LOGO_PATH) {
+if (fs.existsSync(LOGO_PATH)) {
   try {
     logoBuffer = fs.readFileSync(LOGO_PATH);
   } catch (err) {
@@ -655,8 +636,11 @@ export const handler = async (event, context) => {
       attachments: logoBuffer ? [{ filename: "Logo.png", content: logoBuffer, contentType: "image/png", cid: "logo" }] : [],
     };
 
-    if (formType === "selfCheck" && selfCheckPdfBuffer) {
-      mailOptions.attachments.push({ filename: "Where is your practice right now - self-check.pdf", content: selfCheckPdfBuffer, contentType: "application/pdf" });
+    if (formType === "selfCheck") {
+      const pdfBuffer = await fetchPdfBuffer();
+      if (pdfBuffer) {
+        mailOptions.attachments.push({ filename: "Where is your practice right now - self-check.pdf", content: pdfBuffer, contentType: "application/pdf" });
+      }
     }
 
     await transporter.sendMail(mailOptions);
