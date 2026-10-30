@@ -21,7 +21,7 @@ import { SunIcon, ArrowIcon, CheckIcon, QuoteIcon, MailIcon } from "../component
  * is attached to the self-check confirmation email automatically.
  */
 
-const PRIVACY_URL = "/privacy";
+const PRIVACY_URL = "https://lightworkercoach.co.uk/privacy-policy/";
 const PETER_PHOTO: string | null = peterImg;
 
 // Each form posts to the Netlify serverless function.
@@ -527,7 +527,7 @@ export default function Welcome() {
         </p>
         <p className="mt-3">
           <a href={PRIVACY_URL} className="underline-offset-2 hover:underline">
-            Privacy notice
+            Privacy-Policy
           </a>{" "}
           · © 2026 Lightworker Coach Limited
         </p>
